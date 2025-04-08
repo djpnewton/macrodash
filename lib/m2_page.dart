@@ -5,7 +5,7 @@ import 'package:logging/logging.dart';
 
 import 'package:macrodash_models/models.dart';
 
-import 'data.dart';
+import 'api.dart';
 import 'option_buttons.dart';
 
 final Logger log = Logger('m2_page');
@@ -18,7 +18,7 @@ class M2Page extends StatefulWidget {
 }
 
 class _M2PageState extends State<M2Page> {
-  final DataDownloader _dataDownloader = DataDownloader();
+  final ServerApi _api = ServerApi();
   AmountSeries? _m2Series;
   List<AmountEntry> _filteredData = [];
   bool _isLoading = true;
@@ -35,7 +35,7 @@ class _M2PageState extends State<M2Page> {
     setState(() {
       _isLoading = true;
     });
-    final data = await _dataDownloader.m2Data(_selectedRegion);
+    final data = await _api.m2Data(_selectedRegion);
     setState(() {
       _isLoading = false;
       _m2Series = data;

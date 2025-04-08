@@ -42,6 +42,7 @@ dependencies:
   macrodash_server:
     path: macrodash_server
   intl: ^0.20.2
+  web: ^1.1.1
 
 dev_dependencies:
   flutter_test:

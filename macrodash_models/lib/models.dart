@@ -3,6 +3,29 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'models.g.dart';
 
+/// Represents the server version and minimum client version
+@JsonSerializable()
+class VersionInfo extends Equatable {
+  final int version;
+  final int minClientVersion;
+
+  const VersionInfo({required this.version, required this.minClientVersion});
+
+  /// Creates an instance of [VersionInfo] from a JSON map.
+  factory VersionInfo.fromJson(Map<String, dynamic> json) =>
+      _$VersionInfoFromJson(json);
+
+  /// Converts the instance of [VersionInfo] to a JSON map.
+  Map<String, dynamic> toJson() => _$VersionInfoToJson(this);
+
+  @override
+  List<Object?> get props => [version, minClientVersion];
+
+  @override
+  String toString() =>
+      'VersionInfo(version: $version, minClientVersion: $minClientVersion)';
+}
+
 /// Enum to represent the region for M2 data.
 enum M2Region { usa, euro, japan, all }
 

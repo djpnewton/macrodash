@@ -1,9 +1,40 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:macrodash_models/models.dart';
 
+import 'helper.dart' as helper;
 import 'config.dart';
+import 'api.dart';
 
-class AboutPage extends StatelessWidget {
+class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
+
+  @override
+  State<AboutPage> createState() => _AboutPageState();
+}
+
+class _AboutPageState extends State<AboutPage> {
+  final ServerApi _api = ServerApi();
+  VersionInfo? _versionInfo;
+  bool _isLoading = true;
+
+  void _updateWeb() {
+    helper.reloadPage();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchVersionInfo();
+  }
+
+  Future<void> _fetchVersionInfo() async {
+    final versionInfo = await _api.serverVersion();
+    setState(() {
+      _versionInfo = versionInfo;
+      _isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +60,40 @@ class AboutPage extends StatelessWidget {
               'Server URL: $macrodashServerUrl',
               style: const TextStyle(fontSize: 16),
             ),
+            const SizedBox(height: 10),
+            Text(
+              'Client Version: $clientVersion',
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 10),
+            if (_isLoading) ...[
+              const CircularProgressIndicator(),
+            ] else if (_versionInfo == null) ...[
+              const Text(
+                'Failed to load server version information.',
+                style: TextStyle(fontSize: 16, color: Colors.red),
+              ),
+            ] else ...[
+              Text(
+                'Server Version: ${_versionInfo!.version} (Minimum Client Version: ${_versionInfo!.minClientVersion})',
+                style: const TextStyle(fontSize: 16),
+              ),
+            ],
+            if (_versionInfo != null &&
+                _versionInfo!.minClientVersion > clientVersion) ...[
+              const SizedBox(height: 20),
+              if (kIsWeb) ...[
+                ElevatedButton(
+                  onPressed: _updateWeb,
+                  child: const Text('Update'),
+                ),
+              ] else ...[
+                const Text(
+                  'A new version is available. Please update your client.',
+                  style: TextStyle(fontSize: 16, color: Colors.red),
+                ),
+              ],
+            ],
           ],
         ),
       ),

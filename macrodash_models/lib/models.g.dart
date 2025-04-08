@@ -6,6 +6,17 @@ part of 'models.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
+VersionInfo _$VersionInfoFromJson(Map<String, dynamic> json) => VersionInfo(
+  version: (json['version'] as num).toInt(),
+  minClientVersion: (json['minClientVersion'] as num).toInt(),
+);
+
+Map<String, dynamic> _$VersionInfoToJson(VersionInfo instance) =>
+    <String, dynamic>{
+      'version': instance.version,
+      'minClientVersion': instance.minClientVersion,
+    };
+
 AmountEntry _$AmountEntryFromJson(Map<String, dynamic> json) => AmountEntry(
   date: DateTime.parse(json['date'] as String),
   amount: (json['amount'] as num).toDouble(),

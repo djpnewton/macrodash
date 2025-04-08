@@ -6,7 +6,7 @@ import 'package:macrodash_models/models.dart';
 
 import 'config.dart';
 
-class DataDownloader {
+class ServerApi {
   final Logger log = Logger('DataDownloader');
 
   /// Downloads a file from the given [url] and returns its content as a [String].
@@ -36,6 +36,24 @@ class DataDownloader {
       log.severe('Error downloading file: $e');
       return null;
     }
+  }
+
+  /// Fetch server version information.
+  Future<VersionInfo?> serverVersion() async {
+    const url = '$macrodashServerUrl/version';
+    final versionData = await downloadFile(url, null);
+    if (versionData == null) {
+      log.severe('Failed to download version data from $url');
+      return null;
+    }
+    final versionJson = jsonDecode(versionData);
+    if (versionJson == null) {
+      log.severe('Failed to parse version data from $url');
+      return null;
+    }
+    final versionInfo = VersionInfo.fromJson(versionJson);
+    log.info('Version data downloaded successfully from $url');
+    return versionInfo;
   }
 
   /// Fetches and parses the M2 data into a AmountSeries object.

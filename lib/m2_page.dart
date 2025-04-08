@@ -5,8 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:macrodash_models/models.dart';
 
 import 'data.dart';
-
-enum ZoomLevel { oneYear, fiveYears, tenYears, max }
+import 'zoom_buttons.dart';
 
 class M2Page extends StatefulWidget {
   const M2Page({super.key});
@@ -71,77 +70,9 @@ class _M2PageState extends State<M2Page> {
               : Column(
                 children: [
                   // Zoom Buttons
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Row(
-                      mainAxisAlignment:
-                          MainAxisAlignment.end, // Align buttons to the right
-                      children: [
-                        ElevatedButton(
-                          onPressed: () => _filterData(ZoomLevel.oneYear),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                _selectedZoom == ZoomLevel.oneYear
-                                    ? Colors.blue
-                                    : Colors.grey, // Highlight selected button
-                          ),
-                          child: const Text(
-                            '1Y',
-                            style: TextStyle(
-                              color: Colors.white,
-                            ), // Set text color to white
-                          ),
-                        ),
-                        const SizedBox(width: 8), // Add spacing between buttons
-                        ElevatedButton(
-                          onPressed: () => _filterData(ZoomLevel.fiveYears),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                _selectedZoom == ZoomLevel.fiveYears
-                                    ? Colors.blue
-                                    : Colors.grey, // Highlight selected button
-                          ),
-                          child: const Text(
-                            '5Y',
-                            style: TextStyle(
-                              color: Colors.white,
-                            ), // Set text color to white
-                          ),
-                        ),
-                        const SizedBox(width: 8), // Add spacing between buttons
-                        ElevatedButton(
-                          onPressed: () => _filterData(ZoomLevel.tenYears),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                _selectedZoom == ZoomLevel.tenYears
-                                    ? Colors.blue
-                                    : Colors.grey, // Highlight selected button
-                          ),
-                          child: const Text(
-                            '10Y',
-                            style: TextStyle(
-                              color: Colors.white,
-                            ), // Set text color to white
-                          ),
-                        ),
-                        const SizedBox(width: 8), // Add spacing between buttons
-                        ElevatedButton(
-                          onPressed: () => _filterData(ZoomLevel.max),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                _selectedZoom == ZoomLevel.max
-                                    ? Colors.blue
-                                    : Colors.grey, // Highlight selected button
-                          ),
-                          child: const Text(
-                            'Max',
-                            style: TextStyle(
-                              color: Colors.white,
-                            ), // Set text color to white
-                          ),
-                        ),
-                      ],
-                    ),
+                  ZoomButtons(
+                    selectedZoom: _selectedZoom,
+                    onZoomSelected: (zoomLevel) => _filterData(zoomLevel),
                   ),
                   // Line Chart
                   Expanded(

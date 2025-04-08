@@ -39,6 +39,8 @@ dependencies:
   fl_chart: ^0.70.2
   macrodash_models:
       path: macrodash_models
+  macrodash_server:
+    path: macrodash_server
   intl: ^0.20.2
 
 dev_dependencies:

@@ -10,10 +10,18 @@ class DataDownloader {
   final Logger log = Logger('DataDownloader');
 
   /// Downloads a file from the given [url] and returns its content as a [String].
-  Future<String?> downloadFile(String url) async {
+  Future<String?> downloadFile(
+    String url,
+    Map<String, dynamic>? queryParameters,
+  ) async {
+    var uri = Uri.parse(url);
+    if (queryParameters != null) {
+      uri = uri.replace(queryParameters: queryParameters);
+    }
+    log.info('Downloading file from $uri');
     try {
       // Fetch the file from the URL
-      final response = await http.get(Uri.parse(url));
+      final response = await http.get(uri);
 
       if (response.statusCode == 200) {
         log.info('File downloaded successfully from $url');
@@ -30,11 +38,12 @@ class DataDownloader {
     }
   }
 
-  /// Fetches and parses the M2 data into a list of M2Entry objects.
-  Future<List<M2Entry>?> m2Data() async {
+  /// Fetches and parses the M2 data into a AmountSeries object.
+  Future<AmountSeries?> m2Data(M2Region region) async {
     const url = '$macrodashServerUrl/fred/m2';
 
-    final m2data = await downloadFile(url);
+    final queryParameters = {'region': region.name};
+    final m2data = await downloadFile(url, queryParameters);
     if (m2data == null) {
       log.severe('Failed to download M2 data from $url');
       return null;
@@ -44,10 +53,7 @@ class DataDownloader {
       log.severe('Failed to parse M2 data from $url');
       return null;
     }
-    List<M2Entry> m2 =
-        m2json.map<M2Entry>((e) {
-          return M2Entry.fromJson(e);
-        }).toList();
+    final m2 = AmountSeries.fromJson(m2json);
     log.info('M2 data downloaded successfully from $url');
     return m2;
   }

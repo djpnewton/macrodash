@@ -6,12 +6,29 @@ part of 'models.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-M2Entry _$M2EntryFromJson(Map<String, dynamic> json) => M2Entry(
+AmountEntry _$AmountEntryFromJson(Map<String, dynamic> json) => AmountEntry(
   date: DateTime.parse(json['date'] as String),
   amount: (json['amount'] as num).toDouble(),
 );
 
-Map<String, dynamic> _$M2EntryToJson(M2Entry instance) => <String, dynamic>{
-  'date': instance.date.toIso8601String(),
-  'amount': instance.amount,
-};
+Map<String, dynamic> _$AmountEntryToJson(AmountEntry instance) =>
+    <String, dynamic>{
+      'date': instance.date.toIso8601String(),
+      'amount': instance.amount,
+    };
+
+AmountSeries _$AmountSeriesFromJson(Map<String, dynamic> json) => AmountSeries(
+  description: json['description'] as String,
+  sources: (json['sources'] as List<dynamic>).map((e) => e as String).toList(),
+  data:
+      (json['data'] as List<dynamic>)
+          .map((e) => AmountEntry.fromJson(e as Map<String, dynamic>))
+          .toList(),
+);
+
+Map<String, dynamic> _$AmountSeriesToJson(AmountSeries instance) =>
+    <String, dynamic>{
+      'description': instance.description,
+      'sources': instance.sources,
+      'data': instance.data,
+    };

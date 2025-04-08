@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
 
 import 'package:macrodash_models/models.dart';
 
@@ -45,8 +46,11 @@ class _M2PageState extends State<M2Page> {
                 child: LineChart(
                   LineChartData(
                     titlesData: FlTitlesData(
-                      leftTitles: AxisTitles(
-                        sideTitles: SideTitles(showTitles: true),
+                      topTitles: AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      rightTitles: AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
                       ),
                       bottomTitles: AxisTitles(
                         sideTitles: SideTitles(
@@ -57,17 +61,56 @@ class _M2PageState extends State<M2Page> {
                               return const SizedBox.shrink();
                             }
                             final date = _m2Data[index].date;
+
+                            // Show labels only for years divisible by 10 (decades)
+                            if (date.year % 10 == 0 && date.month == 1) {
+                              return Text(
+                                '${date.year}',
+                                style: const TextStyle(fontSize: 10),
+                              );
+                            }
+                            return const SizedBox.shrink(); // Hide labels for other years
+                          },
+                          interval:
+                              1, // Keep interval as 1 to evaluate all data points
+                        ),
+                      ),
+                      leftTitles: AxisTitles(
+                        axisNameWidget: const Text(
+                          'Billions of Dollars',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        axisNameSize: 30,
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 50,
+                          getTitlesWidget: (value, meta) {
                             return Text(
-                              '${date.month}/${date.year}',
+                              value.toString(),
                               style: const TextStyle(fontSize: 10),
                             );
                           },
-                          interval: (_m2Data.length / 6).ceilToDouble(),
                         ),
                       ),
                     ),
                     borderData: FlBorderData(show: true),
-                    gridData: FlGridData(show: true),
+                    gridData: FlGridData(
+                      show: true,
+                      checkToShowVerticalLine: (value) {
+                        // Show vertical lines only for years divisible by 10 (decades)
+                        final index = value.toInt();
+                        if (index < 0 || index >= _m2Data.length) {
+                          return false;
+                        }
+                        final date = _m2Data[index].date;
+                        return date.year % 10 == 0 && date.month == 1;
+                      },
+                      verticalInterval:
+                          1, // Keep interval as 1 to evaluate all data points
+                    ),
                     lineBarsData: [
                       LineChartBarData(
                         spots:
@@ -82,11 +125,36 @@ class _M2PageState extends State<M2Page> {
                                 )
                                 .toList(),
                         isCurved: true,
-                        //colors: [Colors.blue],
                         barWidth: 2,
                         belowBarData: BarAreaData(show: false),
                       ),
                     ],
+                    lineTouchData: LineTouchData(
+                      touchTooltipData: LineTouchTooltipData(
+                        getTooltipColor: (touchedSpot) => Colors.blueAccent,
+                        getTooltipItems: (touchedSpots) {
+                          return touchedSpots.map((spot) {
+                            final index = spot.x.toInt();
+                            final date = _m2Data[index].date;
+                            final amount = _m2Data[index].amount;
+
+                            // Format the month as an abbreviated word
+                            final formattedMonth = DateFormat.MMM().format(
+                              date,
+                            );
+
+                            return LineTooltipItem(
+                              '$formattedMonth ${date.year}\n${amount.toStringAsFixed(2)}',
+                              const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            );
+                          }).toList();
+                        },
+                      ),
+                      handleBuiltInTouches: true,
+                    ),
                   ),
                 ),
               ),

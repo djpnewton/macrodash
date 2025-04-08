@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 
+import 'package:macrodash_models/models.dart';
+
 import 'data.dart';
 
 class M2Page extends StatefulWidget {

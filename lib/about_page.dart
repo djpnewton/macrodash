@@ -18,13 +18,15 @@ class AboutPage extends StatelessWidget {
               style: TextStyle(fontSize: 20),
             ),
             const SizedBox(height: 20),
+            Text('Build SHA: $gitSha', style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 10),
             Text(
-              'Build SHA: $gitSha', // Access gitSha from config.dart
+              'Build Date: $buildDate',
               style: const TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 10),
             Text(
-              'Build Date: $buildDate', // Access buildDate from config.dart
+              'Server URL: $macrodashServerUrl',
               style: const TextStyle(fontSize: 16),
             ),
           ],

@@ -7,7 +7,7 @@ import 'package:macrodash_models/models.dart';
 import 'config.dart';
 
 class ServerApi {
-  final Logger log = Logger('DataDownloader');
+  final Logger log = Logger('api');
 
   /// Downloads a file from the given [url] and returns its content as a [String].
   Future<String?> downloadFile(
@@ -56,9 +56,9 @@ class ServerApi {
     return versionInfo;
   }
 
-  /// Fetches and parses the M2 data into a AmountSeries object.
+  /// Fetches and parses the M2 data into an AmountSeries object.
   Future<AmountSeries?> m2Data(M2Region region) async {
-    const url = '$macrodashServerUrl/fred/m2';
+    const url = '$macrodashServerUrl/sov/m2';
 
     final queryParameters = {'region': region.name};
     final m2data = await downloadFile(url, queryParameters);
@@ -74,5 +74,37 @@ class ServerApi {
     final m2 = AmountSeries.fromJson(m2json);
     log.info('M2 data downloaded successfully from $url');
     return m2;
+  }
+
+  /// Fetches and parses the debt data into an AmountSeries object.
+  Future<AmountSeries?> debtData(DebtRegion region) async {
+    const url = '$macrodashServerUrl/sov/debt';
+
+    final queryParameters = {'region': region.name};
+    final debtData = await downloadFile(url, queryParameters);
+    if (debtData == null) {
+      log.severe('Failed to download debt data from $url');
+      return null;
+    }
+    final debtJson = jsonDecode(debtData);
+    if (debtJson == null) {
+      log.severe('Failed to parse debt data from $url');
+      return null;
+    }
+    final debt = AmountSeries.fromJson(debtJson);
+    log.info('Debt data downloaded successfully from $url');
+    return debt;
+  }
+
+  /// Generic function to fetch AmountSeries based on the enum type.
+  Future<AmountSeries?> fetchAmountSeries<T extends Enum>(T region) async {
+    if (region is M2Region) {
+      return await m2Data(region);
+    } else if (region is DebtRegion) {
+      return await debtData(region);
+    } else {
+      log.severe('Unsupported region type: ${region.runtimeType}');
+      return null;
+    }
   }
 }

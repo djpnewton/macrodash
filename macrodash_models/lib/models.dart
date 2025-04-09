@@ -29,6 +29,9 @@ class VersionInfo extends Equatable {
 /// Enum to represent the region for M2 data.
 enum M2Region { usa, euro, japan, all }
 
+/// Enum to represent the region for Debt data.
+enum DebtRegion { usa, all }
+
 /// Represents a single entry in price/amount series.
 @JsonSerializable()
 class AmountEntry extends Equatable {

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'package:macrodash_models/models.dart';
-
 class OptionButton extends StatelessWidget {
   final String label;
   final bool isSelected;
@@ -86,13 +84,15 @@ class ZoomButtons extends StatelessWidget {
   }
 }
 
-class RegionButtons extends StatelessWidget {
-  final M2Region selectedRegion;
-  final Function(M2Region) onRegionSelected;
+class RegionButtons<T extends Enum> extends StatelessWidget {
+  final T selectedRegion;
+  final List<T> values;
+  final Function(T) onRegionSelected;
 
   const RegionButtons({
     super.key,
     required this.selectedRegion,
+    required this.values,
     required this.onRegionSelected,
   });
 
@@ -101,33 +101,22 @@ class RegionButtons extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Row(
-        mainAxisAlignment:
-            MainAxisAlignment.start, // Align buttons to the lefta
-        children: [
-          OptionButton(
-            label: 'USA',
-            isSelected: selectedRegion == M2Region.usa,
-            onPressed: () => onRegionSelected(M2Region.usa),
-          ),
-          const SizedBox(width: 1), // Add spacing between buttons
-          OptionButton(
-            label: 'EURO',
-            isSelected: selectedRegion == M2Region.euro,
-            onPressed: () => onRegionSelected(M2Region.euro),
-          ),
-          const SizedBox(width: 1), // Add spacing between buttons
-          OptionButton(
-            label: 'JAPAN',
-            isSelected: selectedRegion == M2Region.japan,
-            onPressed: () => onRegionSelected(M2Region.japan),
-          ),
-          const SizedBox(width: 1), // Add spacing between buttons
-          OptionButton(
-            label: 'ALL',
-            isSelected: selectedRegion == M2Region.all,
-            onPressed: () => onRegionSelected(M2Region.all),
-          ),
-        ],
+        children:
+            values.map((region) {
+              final isLast =
+                  region == values.last; // Check if it's the last button
+              return Row(
+                children: [
+                  OptionButton(
+                    label: region.name.toUpperCase(),
+                    isSelected: selectedRegion == region,
+                    onPressed: () => onRegionSelected(region),
+                  ),
+                  if (!isLast) // Add a 1-pixel box unless it's the last button
+                    const SizedBox(width: 1),
+                ],
+              );
+            }).toList(),
       ),
     );
   }

@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 
 import 'config.dart';
-import 'm2_page.dart';
+import 'amount_series_page.dart';
 import 'settings_page.dart';
 import 'about_page.dart';
+import 'package:macrodash_models/models.dart';
 
 final log = Logger('mainlogger');
 
-enum AppPage { m2, settings, about }
+enum AppPage { m2, debt, settings, about }
 
 void main() {
   Logger.root.level = Level.ALL; // defaults to Level.INFO
@@ -53,7 +54,28 @@ class _MyHomePageState extends State<MyHomePage> {
         log.info('Navigating to M2');
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const M2Page()),
+          MaterialPageRoute(
+            builder:
+                (context) => AmountSeriesPage(
+                  title: 'M2',
+                  defaultRegion: M2Region.usa,
+                  regions: M2Region.values,
+                ),
+          ),
+        );
+        break;
+      case AppPage.debt:
+        log.info('Navigating to Debt');
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) => AmountSeriesPage(
+                  title: 'Debt',
+                  defaultRegion: DebtRegion.usa,
+                  regions: DebtRegion.values,
+                ),
+          ),
         );
         break;
       case AppPage.settings:
@@ -94,11 +116,19 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.home),
+              leading: const Icon(Icons.money),
               title: const Text('M2'),
               onTap: () {
                 Navigator.pop(context); // Close the drawer
                 _navigateToPage(AppPage.m2);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.account_balance),
+              title: const Text('Debt'),
+              onTap: () {
+                Navigator.pop(context); // Close the drawer
+                _navigateToPage(AppPage.debt);
               },
             ),
             ListTile(

@@ -29,8 +29,27 @@ class VersionInfo extends Equatable {
 /// Enum to represent the region for M2 data.
 enum M2Region { usa, euro, japan, all }
 
+final m2RegionLabels = {
+  M2Region.usa: 'USA',
+  M2Region.euro: 'Euro',
+  M2Region.japan: 'Japan',
+  M2Region.all: 'All',
+};
+
 /// Enum to represent the region for Debt data.
 enum DebtRegion { usa, all }
+
+final debtRegionLabels = {DebtRegion.usa: 'USA', DebtRegion.all: 'All'};
+
+/// Enum to represent the region for Bond Rate data.
+enum BondRateRegion { usa }
+
+final bondRateRegionLabels = {BondRateRegion.usa: 'USA'};
+
+/// Enum to represent the term of bond.
+enum BondTerm { thirtyYear, twentyYear }
+
+final bondTermLabels = {BondTerm.thirtyYear: '30Y', BondTerm.twentyYear: '20Y'};
 
 /// Represents a single entry in price/amount series.
 @JsonSerializable()
@@ -54,7 +73,7 @@ class AmountEntry extends Equatable {
   String toString() => 'AmountEntry(date: $date, amount: $amount)';
 }
 
-/// Represents a single entry in price/amount series.
+/// Represents a price/amount series.
 @JsonSerializable()
 class AmountSeries extends Equatable {
   final String description;

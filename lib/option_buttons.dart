@@ -84,16 +84,18 @@ class ZoomButtons extends StatelessWidget {
   }
 }
 
-class RegionButtons<T extends Enum> extends StatelessWidget {
-  final T selectedRegion;
+class OptionButtons<T extends Enum> extends StatelessWidget {
+  final T selectedOption;
   final List<T> values;
-  final Function(T) onRegionSelected;
+  final Function(T) onOptionSelected;
+  final Map<T, String> labels;
 
-  const RegionButtons({
+  const OptionButtons({
     super.key,
-    required this.selectedRegion,
+    required this.selectedOption,
     required this.values,
-    required this.onRegionSelected,
+    required this.onOptionSelected,
+    required this.labels,
   });
 
   @override
@@ -102,15 +104,17 @@ class RegionButtons<T extends Enum> extends StatelessWidget {
       padding: const EdgeInsets.all(8.0),
       child: Row(
         children:
-            values.map((region) {
-              final isLast =
-                  region == values.last; // Check if it's the last button
+            values.map((e) {
+              final isLast = e == values.last; // Check if it's the last button
               return Row(
                 children: [
                   OptionButton(
-                    label: region.name.toUpperCase(),
-                    isSelected: selectedRegion == region,
-                    onPressed: () => onRegionSelected(region),
+                    label:
+                        labels.containsKey(e)
+                            ? labels[e]!
+                            : e.name.toUpperCase(),
+                    isSelected: selectedOption == e,
+                    onPressed: () => onOptionSelected(e),
                   ),
                   if (!isLast) // Add a 1-pixel box unless it's the last button
                     const SizedBox(width: 1),

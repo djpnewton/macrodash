@@ -7,6 +7,18 @@ import 'package:logging/logging.dart';
 import 'package:macrodash_models/models.dart';
 import 'package:quiver/time.dart';
 
+/// Wrap AmountSeries with a bond term
+class BondRateData {
+  /// Creates an instance of [BondRateData] with the provided term and data.
+  const BondRateData({required this.term, required this.data});
+
+  /// the bond term
+  final BondTerm term;
+
+  /// the data for the bond term
+  final List<AmountEntry> data;
+}
+
 /// A class that handles downloading and parsing data from various sources.
 /// It provides methods to download and parse data related to M2 money supply,
 /// exchange rates, and sovereign debt.
@@ -14,9 +26,15 @@ class DataDownloader {
   /// Creates an instance of [DataDownloader] with the provided FRED API key.
   DataDownloader({required String fredApiKey}) : _fredApiKey = fredApiKey;
 
+  /// FRED data source
   static const String fredSource = 'https://fred.stlouisfed.org/';
+
+  /// ECB data source
   static const String ecbSource = 'https://www.ecb.europa.eu/';
+
+  /// US Treasury data source
   static const String usTreasurySource = 'https://fiscaldata.treasury.gov/';
+
   final String _fredApiKey;
   final Logger _log = Logger('DataDownloader');
 
@@ -141,6 +159,26 @@ class DataDownloader {
     return _downloadFile(url, queryParameters);
   }
 
+  /// Downloads the latest US Bond Rate data in JSON format from the treasury
+  /// API
+  Future<String?> _downloadUsBondRateData({
+    int? pageNumber,
+    int? pageSize,
+  }) async {
+    final queryParameters = {
+      'format': 'json',
+    };
+    if (pageNumber != null) {
+      queryParameters['page[number]'] = pageNumber.toString();
+    }
+    if (pageSize != null) {
+      queryParameters['page[size]'] = pageSize.toString();
+    }
+    const url =
+        'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/auctions_query';
+    return _downloadFile(url, queryParameters);
+  }
+
   /// Fetches and parses the Jap/US Dollar exchange rate
   Future<double?> japUsdRate() async {
     final jsonData = await _downloadFredJapUsdData();
@@ -255,8 +293,8 @@ class DataDownloader {
         // ignore: avoid_dynamic_calls
         final dateStart = seriesDates[i]['start'] as String;
         var date = DateTime.parse(dateStart);
-        // TODO: we should be able to get rid of this once the client has better
-        // handling of dates in its grids etc.
+        // TODO(djpnewton): we should be able to get rid of this once the client
+        // has better handling of dates in its grids etc.
         // Adjust the date if it is the last hour of the last day of the month
         if (date.hour >= 22 && date.day == daysInMonth(date.year, date.month)) {
           var newYear = date.year;
@@ -393,6 +431,87 @@ class DataDownloader {
       return data;
     } catch (e) {
       _log.severe('Error parsing US Debt data: $e');
+      return null;
+    }
+  }
+
+  /// Fetches and parses the US Bond Rate data into a list of AmountEntry
+  /// objects.
+  Future<List<BondRateData>?> usBondRateData() async {
+    var jsonData = await _downloadUsBondRateData(pageSize: 10000);
+    if (jsonData == null) {
+      _log.warning('Failed to fetch US Bond Rate data.');
+      return null;
+    }
+
+    try {
+      // Parse the JSON data
+      var parsedJson = jsonDecode(jsonData);
+      // ignore: avoid_dynamic_calls
+      final links = parsedJson['links'] as Map<String, dynamic>;
+      _log.info('Links: $links');
+      // Extract the data
+      final last = links['last'] as String;
+      _log.info('Last link: $last');
+      // parse query string 'last'
+      final lastParams = Uri.parse('http://example.com?$last').queryParameters;
+      _log.info('Last params: $lastParams');
+      final pageNumber = int.tryParse(lastParams['page[number]'] ?? '');
+      final pageSize = int.tryParse(lastParams['page[size]'] ?? '');
+      if (pageNumber == null || pageSize == null) {
+        _log.warning('Failed to parse US Bond Rate data.');
+        return null;
+      }
+      // Download the data again with the page number and size
+      jsonData = await _downloadUsBondRateData(
+        pageNumber: pageNumber,
+        pageSize: pageSize,
+      );
+      if (jsonData == null) {
+        _log.warning('Failed to fetch US Bond Rate data.');
+        return null;
+      }
+      // Parse the JSON data
+      parsedJson = jsonDecode(jsonData);
+      // ignore: avoid_dynamic_calls
+      final observations = parsedJson['data'] as List<dynamic>;
+      // Extract the data
+      final bond30yData = <AmountEntry>[];
+      final bond20yData = <AmountEntry>[];
+
+      for (final entry in observations) {
+        // ignore: avoid_dynamic_calls
+        final securityType = entry['security_type'] as String;
+        // ignore: avoid_dynamic_calls
+        final securityTerm = entry['security_term'] as String;
+
+        if (securityType != 'Bond') {
+          continue;
+        }
+        if (securityTerm != '30-Year' && securityTerm != '20-Year') {
+          continue;
+        }
+
+        // ignore: avoid_dynamic_calls
+        final date = DateTime.parse(entry['record_date'] as String);
+        // ignore: avoid_dynamic_calls
+        final amount = double.parse(entry['avg_med_yield'] as String);
+
+        if (securityType == 'Bond' && securityTerm == '30-Year') {
+          bond30yData.add(AmountEntry(date: date, amount: amount));
+        }
+        if (securityType == 'Bond' && securityTerm == '20-Year') {
+          bond20yData.add(AmountEntry(date: date, amount: amount));
+        }
+      }
+
+      _log.info('US Bond Rate data parsed successfully.');
+      return [
+        BondRateData(term: BondTerm.thirtyYear, data: bond30yData),
+        BondRateData(term: BondTerm.twentyYear, data: bond20yData),
+      ];
+    } catch (e) {
+      _log.severe('Error parsing US Bond Rate data: $e');
       return null;
     }
   }

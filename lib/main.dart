@@ -9,7 +9,7 @@ import 'package:macrodash_models/models.dart';
 
 final log = Logger('mainlogger');
 
-enum AppPage { m2, debt, settings, about }
+enum AppPage { m2, debt, bondRates, settings, about }
 
 void main() {
   Logger.root.level = Level.ALL; // defaults to Level.INFO
@@ -60,6 +60,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   title: 'M2',
                   defaultRegion: M2Region.usa,
                   regions: M2Region.values,
+                  regionLabels: m2RegionLabels,
                 ),
           ),
         );
@@ -74,6 +75,24 @@ class _MyHomePageState extends State<MyHomePage> {
                   title: 'Debt',
                   defaultRegion: DebtRegion.usa,
                   regions: DebtRegion.values,
+                  regionLabels: debtRegionLabels,
+                ),
+          ),
+        );
+        break;
+      case AppPage.bondRates:
+        log.info('Navigating to Bond Rates');
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) => AmountSeriesPage(
+                  title: 'Bond Rates',
+                  defaultRegion: BondRateRegion.usa,
+                  regions: BondRateRegion.values,
+                  regionLabels: bondRateRegionLabels,
+                  categories: BondTerm.values,
+                  categoryLabels: bondTermLabels,
                 ),
           ),
         );
@@ -129,6 +148,14 @@ class _MyHomePageState extends State<MyHomePage> {
               onTap: () {
                 Navigator.pop(context); // Close the drawer
                 _navigateToPage(AppPage.debt);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.percent),
+              title: const Text('Bond Rates'),
+              onTap: () {
+                Navigator.pop(context); // Close the drawer
+                _navigateToPage(AppPage.bondRates);
               },
             ),
             ListTile(

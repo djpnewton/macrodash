@@ -96,12 +96,48 @@ class ServerApi {
     return debt;
   }
 
+  /// Fetches and parses the bond rate data into an AmountSeries object.
+  Future<AmountSeries?> bondRateData(
+    BondRateRegion region,
+    BondTerm term,
+  ) async {
+    const url = '$macrodashServerUrl/sov/bond_rates';
+
+    final queryParameters = {'region': region.name, 'term': term.name};
+    final bondRateData = await downloadFile(url, queryParameters);
+    if (bondRateData == null) {
+      log.severe('Failed to download bond rate data from $url');
+      return null;
+    }
+    final bondRateJson = jsonDecode(bondRateData);
+    if (bondRateJson == null) {
+      log.severe('Failed to parse bond rate data from $url');
+      return null;
+    }
+    final bondRates = AmountSeries.fromJson(bondRateJson);
+    log.info('Bond rate data downloaded successfully from $url');
+    return bondRates;
+  }
+
   /// Generic function to fetch AmountSeries based on the enum type.
-  Future<AmountSeries?> fetchAmountSeries<T extends Enum>(T region) async {
+  Future<AmountSeries?> fetchAmountSeries<T extends Enum, C extends Enum>(
+    T region,
+    C? category,
+  ) async {
     if (region is M2Region) {
       return await m2Data(region);
     } else if (region is DebtRegion) {
       return await debtData(region);
+    } else if (region is BondRateRegion) {
+      if (category == null) {
+        log.severe('Category is required for BondRateRegion');
+        return null;
+      }
+      if (category is! BondTerm) {
+        log.severe('Category must be of type BondTerm');
+        return null;
+      }
+      return await bondRateData(region, category);
     } else {
       log.severe('Unsupported region type: ${region.runtimeType}');
       return null;

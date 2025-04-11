@@ -1,7 +1,10 @@
 import 'package:dart_frog/dart_frog.dart';
+import 'package:logging/logging.dart';
 import 'package:macrodash_models/models.dart';
 
 import '_middleware.dart';
+
+final _log = Logger('sov_debt');
 
 Future<Response> onRequest(RequestContext context) async {
   final dataDownloader = context.read<DataDownloader>();
@@ -15,6 +18,18 @@ Future<Response> onRequest(RequestContext context) async {
     (r) => r.name == regionParam,
     orElse: () => DebtRegion.all,
   );
+
+  // check cache
+  final cache = context.read<Cache>();
+  final key = request.uri.toString();
+  final cachedResponse = cache.get(key);
+  if (cachedResponse != null) {
+    _log.info('Cache hit: $key');
+    return Response.json(
+      body: cachedResponse,
+      headers: {'Content-Type': 'application/json'},
+    );
+  }
 
   // Fetch data based on the region
   List<AmountEntry>? debtData;
@@ -41,8 +56,12 @@ Future<Response> onRequest(RequestContext context) async {
     data: debtData,
   );
 
+  // Cache the response
+  final resultJson = result.toJson();
+  cache.add(key, resultJson);
+
   return Response.json(
-    body: result.toJson(),
+    body: resultJson,
     headers: {'Content-Type': 'application/json'},
   );
 }

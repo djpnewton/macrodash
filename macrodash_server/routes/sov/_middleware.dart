@@ -3,7 +3,10 @@ import 'dart:io';
 import 'package:dart_frog/dart_frog.dart';
 import 'package:logging/logging.dart';
 
+import '../../lib/cache.dart';
 import '../../lib/data.dart';
+
+export '../../lib/cache.dart';
 export '../../lib/data.dart';
 
 final Logger log = Logger('sov_middleware');
@@ -19,5 +22,7 @@ Handler middleware(Handler handler) {
         fredApiKey: apiKey ?? '',
       );
     }),
+  ).use(
+    provider<Cache>((_) => Cache()),
   );
 }

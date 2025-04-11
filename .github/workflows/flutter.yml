@@ -41,4 +41,3 @@ jobs:
       - uses: bluefireteam/flutter-gh-pages@v9
         with:
           compileToWasm: true
-          baseHref: /${{ github.event.repository.name }}/

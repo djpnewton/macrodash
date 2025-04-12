@@ -43,6 +43,8 @@ dependencies:
     path: macrodash_server
   intl: ^0.20.2
   web: ^1.1.1
+  financial_chart: ^0.1.8
+  shared_preferences: ^2.5.3
 
 dev_dependencies:
   flutter_test:

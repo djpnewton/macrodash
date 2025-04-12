@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 
 import 'config.dart';
+import 'settings.dart';
 import 'amount_series_page.dart';
 import 'settings_page.dart';
 import 'about_page.dart';
@@ -48,69 +49,77 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  void _navigateToPage(AppPage page) {
-    switch (page) {
-      case AppPage.m2:
-        log.info('Navigating to M2');
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder:
-                (context) => AmountSeriesPage(
-                  title: 'M2',
-                  defaultRegion: M2Region.usa,
-                  regions: M2Region.values,
-                  regionLabels: m2RegionLabels,
-                ),
-          ),
-        );
-        break;
-      case AppPage.debt:
-        log.info('Navigating to Debt');
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder:
-                (context) => AmountSeriesPage(
-                  title: 'Debt',
-                  defaultRegion: DebtRegion.usa,
-                  regions: DebtRegion.values,
-                  regionLabels: debtRegionLabels,
-                ),
-          ),
-        );
-        break;
-      case AppPage.bondRates:
-        log.info('Navigating to Bond Rates');
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder:
-                (context) => AmountSeriesPage(
-                  title: 'Bond Rates',
-                  defaultRegion: BondRateRegion.usa,
-                  regions: BondRateRegion.values,
-                  regionLabels: bondRateRegionLabels,
-                  categories: BondTerm.values,
-                  categoryLabels: bondTermLabels,
-                ),
-          ),
-        );
-        break;
-      case AppPage.settings:
-        log.info('Navigating to Settings');
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const SettingsPage()),
-        );
-        break;
-      case AppPage.about:
-        log.info('Navigating to About');
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const AboutPage()),
-        );
-        break;
+  void _navigateToPage(AppPage page) async {
+    // get the chart library setting
+    final chartLibrary = await Settings.loadChartLibrary();
+    // navigate to the selected page
+    if (mounted) {
+      switch (page) {
+        case AppPage.m2:
+          log.info('Navigating to M2');
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) => AmountSeriesPage(
+                    title: 'M2',
+                    chartLibrary: chartLibrary,
+                    defaultRegion: M2Region.usa,
+                    regions: M2Region.values,
+                    regionLabels: m2RegionLabels,
+                  ),
+            ),
+          );
+          break;
+        case AppPage.debt:
+          log.info('Navigating to Debt');
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) => AmountSeriesPage(
+                    title: 'Debt',
+                    chartLibrary: chartLibrary,
+                    defaultRegion: DebtRegion.usa,
+                    regions: DebtRegion.values,
+                    regionLabels: debtRegionLabels,
+                  ),
+            ),
+          );
+          break;
+        case AppPage.bondRates:
+          log.info('Navigating to Bond Rates');
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) => AmountSeriesPage(
+                    title: 'Bond Rates',
+                    chartLibrary: chartLibrary,
+                    defaultRegion: BondRateRegion.usa,
+                    regions: BondRateRegion.values,
+                    regionLabels: bondRateRegionLabels,
+                    categories: BondTerm.values,
+                    categoryLabels: bondTermLabels,
+                  ),
+            ),
+          );
+          break;
+        case AppPage.settings:
+          log.info('Navigating to Settings');
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const SettingsPage()),
+          );
+          break;
+        case AppPage.about:
+          log.info('Navigating to About');
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AboutPage()),
+          );
+          break;
+      }
     }
   }
 

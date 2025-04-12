@@ -6,6 +6,8 @@ import 'package:macrodash_models/models.dart';
 import 'api.dart';
 import 'option_buttons.dart';
 import 'vis.dart';
+import 'vis2.dart';
+import 'settings.dart';
 
 final Logger log = Logger('amount_series_page');
 
@@ -13,6 +15,7 @@ class AmountSeriesPage<T extends Enum, C extends Enum> extends StatefulWidget {
   const AmountSeriesPage({
     super.key,
     required this.title,
+    required this.chartLibrary,
     required this.defaultRegion,
     required this.regions,
     required this.regionLabels,
@@ -21,6 +24,7 @@ class AmountSeriesPage<T extends Enum, C extends Enum> extends StatefulWidget {
   });
 
   final String title;
+  final ChartLibrary chartLibrary;
   final T defaultRegion;
   final List<T> regions;
   final Map<T, String> regionLabels;
@@ -157,11 +161,18 @@ class _AmountSeriesPageState<T extends Enum, C extends Enum>
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: Vis(
-                    filteredData: _filteredData,
-                    dataSeries: _amountSeries,
-                    selectedZoom: _selectedZoom,
-                  ),
+                  child: switch (widget.chartLibrary) {
+                    ChartLibrary.flChart => Vis(
+                      filteredData: _filteredData,
+                      dataSeries: _amountSeries,
+                      selectedZoom: _selectedZoom,
+                    ),
+                    ChartLibrary.financialChart => VisFinancialChart(
+                      filteredData: _filteredData,
+                      dataSeries: _amountSeries,
+                      selectedZoom: _selectedZoom,
+                    ),
+                  },
                 ),
               ),
         ],

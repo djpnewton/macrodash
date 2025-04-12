@@ -14,23 +14,37 @@ class OptionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ElevatedButton(
+    final theme = Theme.of(context); // Access the current theme
+
+    return TextButton(
       onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
+      style: TextButton.styleFrom(
         backgroundColor:
-            isSelected ? Colors.blue : Colors.grey, // Highlight selected button
-        fixedSize: const Size(30, 30), // Set fixed size for square buttons
+            isSelected
+                ? theme
+                    .colorScheme
+                    .primary // Use primary color for selected
+                : theme
+                    .colorScheme
+                    .surfaceContainer, // Use surface color for unselected
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8), // Slightly rounded corners
+          borderRadius: BorderRadius.circular(4), // Slightly rounded corners
         ),
-        padding: EdgeInsets.zero, // Remove extra padding
+        minimumSize: Size.square(35),
+        padding: EdgeInsets.zero,
       ),
       child: Text(
         label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 12,
-        ), // Adjust font size
+        style: TextStyle(
+          color:
+              isSelected
+                  ? theme
+                      .colorScheme
+                      .onPrimary // Text color for selected
+                  : theme.colorScheme.onSurface, // Text color for unselected
+          fontSize: 10,
+          //height: 0.1,
+        ),
       ),
     );
   }

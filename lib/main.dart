@@ -97,8 +97,8 @@ class _MyHomePageState extends State<MyHomePage> {
                     defaultRegion: BondRateRegion.usa,
                     regions: BondRateRegion.values,
                     regionLabels: bondRateRegionLabels,
-                    categories: BondTerm.values,
-                    categoryLabels: bondTermLabels,
+                    categories: [BondTerm.values],
+                    categoryLabels: [bondTermLabels],
                   ),
             ),
           );
@@ -115,8 +115,16 @@ class _MyHomePageState extends State<MyHomePage> {
                     defaultRegion: MarketIndexRegion.usa,
                     regions: MarketIndexRegion.values,
                     regionLabels: marketIndexRegionLabels,
-                    categories: MarketIndex.values,
-                    categoryLabels: marketIndexLabels,
+                    categories: [
+                      MarketIndexUsa.values,
+                      MarketIndexEurope.values,
+                      MarketIndexAsia.values,
+                    ],
+                    categoryLabels: [
+                      marketIndexUsaLabels,
+                      marketIndexEuropeLabels,
+                      marketIndexAsiaLabels,
+                    ],
                   ),
             ),
           );

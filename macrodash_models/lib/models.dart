@@ -66,20 +66,44 @@ enum BondTerm { thirtyYear, twentyYear }
 final bondTermLabels = {BondTerm.thirtyYear: '30Y', BondTerm.twentyYear: '20Y'};
 
 /// Enum to represent the market index region.
-enum MarketIndexRegion { usa }
+enum MarketIndexRegion { usa, europe, asia }
 
-final marketIndexRegionLabels = {MarketIndexRegion.usa: 'USA'};
+final marketIndexRegionLabels = {
+  MarketIndexRegion.usa: 'USA',
+  MarketIndexRegion.europe: 'Europe',
+  MarketIndexRegion.asia: 'Asia',
+};
 
 /// Enum to represent the market index
-enum MarketIndex { sp500, nasdaq, dowjones, russell2000, vix, dxy }
+enum MarketIndexUsa { sp500, nasdaq, dowjones, russell2000, vix, dxy }
 
-final marketIndexLabels = {
-  MarketIndex.sp500: 'S&P 500',
-  MarketIndex.nasdaq: 'NASDAQ',
-  MarketIndex.dowjones: 'Dow Jones',
-  MarketIndex.russell2000: 'Russell 2000',
-  MarketIndex.vix: 'VIX',
-  MarketIndex.dxy: 'DXY',
+final marketIndexUsaLabels = {
+  MarketIndexUsa.sp500: 'S&P 500',
+  MarketIndexUsa.nasdaq: 'NASDAQ',
+  MarketIndexUsa.dowjones: 'Dow Jones',
+  MarketIndexUsa.russell2000: 'Russell 2000',
+  MarketIndexUsa.vix: 'VIX',
+  MarketIndexUsa.dxy: 'DXY',
+};
+
+enum MarketIndexEurope { ftse100, dax, cac40, ibex35, euroStocks50 }
+
+final marketIndexEuropeLabels = {
+  MarketIndexEurope.ftse100: 'FTSE 100',
+  MarketIndexEurope.dax: 'DAX',
+  MarketIndexEurope.cac40: 'CAC 40',
+  MarketIndexEurope.ibex35: 'IBEX 35',
+  MarketIndexEurope.euroStocks50: 'Stoxx 50',
+};
+
+enum MarketIndexAsia { nikkei225, hangSeng, sse, sensex, nifty50 }
+
+final marketIndexAsiaLabels = {
+  MarketIndexAsia.nikkei225: 'Nikkei 225',
+  MarketIndexAsia.hangSeng: 'HSI',
+  MarketIndexAsia.sse: 'SSE',
+  MarketIndexAsia.sensex: 'SENSEX',
+  MarketIndexAsia.nifty50: 'Nifty 50',
 };
 
 /// Represents a single entry in price/amount series.

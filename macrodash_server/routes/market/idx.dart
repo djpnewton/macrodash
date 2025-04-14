@@ -12,21 +12,28 @@ Future<Response> onRequest(RequestContext context) async {
   final request = context.request;
   final params = request.uri.queryParameters;
 
-/*
   // Parse the region parameter into the Region enum
   final regionParam = params['region']?.toLowerCase();
   final region = MarketIndexRegion.values.firstWhere(
     (r) => r.name.toLowerCase() == regionParam,
     orElse: () => MarketIndexRegion.usa,
   );
-*/
 
   // Parse the term parameter into the market index enum
-  final indexParam = params['index']?.toLowerCase();
-  final index = MarketIndex.values.firstWhere(
-    (t) => t.name.toLowerCase() == indexParam,
-    orElse: () => MarketIndex.sp500,
-  );
+  final index = switch (region) {
+    MarketIndexRegion.usa => MarketIndexUsa.values.firstWhere(
+        (r) => r.name.toLowerCase() == params['index']?.toLowerCase(),
+        orElse: () => MarketIndexUsa.sp500,
+      ),
+    MarketIndexRegion.europe => MarketIndexEurope.values.firstWhere(
+        (r) => r.name.toLowerCase() == params['index']?.toLowerCase(),
+        orElse: () => MarketIndexEurope.ftse100,
+      ),
+    MarketIndexRegion.asia => MarketIndexAsia.values.firstWhere(
+        (r) => r.name.toLowerCase() == params['index']?.toLowerCase(),
+        orElse: () => MarketIndexAsia.nikkei225,
+      )
+  };
 
   // Parse the range parameter into the DataRange enum
   final rangeParam = params['range']?.toLowerCase();
@@ -52,10 +59,14 @@ Future<Response> onRequest(RequestContext context) async {
     return Response(statusCode: 500, body: 'Failed to fetch index data.');
   }
 
-  final description = marketIndexLabels[index] ?? 'Unknown Index';
+  final description = marketIndexUsaLabels.containsKey(index)
+      ? marketIndexUsaLabels[index]
+      : marketIndexEuropeLabels.containsKey(index)
+          ? marketIndexEuropeLabels[index]
+          : marketIndexAsiaLabels[index];
 
   final result = AmountSeries(
-    description: description,
+    description: description ?? 'unknown index',
     sources: const [MarketData.yahooSource],
     data: data,
   );

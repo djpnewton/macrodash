@@ -17,24 +17,55 @@ class MarketData extends AbstractDownloader {
 
   /// Fetches and parses the Index data into a list of AmountEntry objects.
   Future<List<AmountEntry>?> indexData(
-    MarketIndex index,
+    Enum index,
     DataRange range,
   ) async {
     // convert index string to yahoo finance ticker
-    String ticker;
-    switch (index) {
-      case MarketIndex.sp500:
-        ticker = '^GSPC';
-      case MarketIndex.nasdaq:
-        ticker = '^IXIC';
-      case MarketIndex.dowjones:
-        ticker = '^DJI';
-      case MarketIndex.russell2000:
-        ticker = '^RUT';
-      case MarketIndex.vix:
-        ticker = '^VIX';
-      case MarketIndex.dxy:
-        ticker = 'DX-Y.NYB';
+    var ticker = '';
+    if (index is MarketIndexUsa) {
+      switch (index) {
+        case MarketIndexUsa.sp500:
+          ticker = '^GSPC';
+        case MarketIndexUsa.nasdaq:
+          ticker = '^IXIC';
+        case MarketIndexUsa.dowjones:
+          ticker = '^DJI';
+        case MarketIndexUsa.russell2000:
+          ticker = '^RUT';
+        case MarketIndexUsa.vix:
+          ticker = '^VIX';
+        case MarketIndexUsa.dxy:
+          ticker = 'DX-Y.NYB';
+      }
+    } else if (index is MarketIndexEurope) {
+      switch (index) {
+        case MarketIndexEurope.ftse100:
+          ticker = '^FTSE';
+        case MarketIndexEurope.dax:
+          ticker = '^GDAXI';
+        case MarketIndexEurope.cac40:
+          ticker = '^FCHI';
+        case MarketIndexEurope.ibex35:
+          ticker = '^IBEX';
+        case MarketIndexEurope.euroStocks50:
+          ticker = '^STOXX50E';
+      }
+    } else if (index is MarketIndexAsia) {
+      switch (index) {
+        case MarketIndexAsia.nikkei225:
+          ticker = '^N225';
+        case MarketIndexAsia.hangSeng:
+          ticker = '^HSI';
+        case MarketIndexAsia.sse:
+          ticker = '000001.SS';
+        case MarketIndexAsia.sensex:
+          ticker = '^BSESN';
+        case MarketIndexAsia.nifty50:
+          ticker = '^NSEI';
+      }
+    } else {
+      _log.severe('Unknown index type: $index');
+      return null;
     }
     // convert the range enum to a string
     final rangeStr = switch (range) {

@@ -122,7 +122,7 @@ class ServerApi {
   /// Fetches and parses the market index data into an AmountSeries object.
   Future<AmountSeries?> marketIndexData(
     MarketIndexRegion region,
-    MarketIndex index,
+    Enum index,
     DataRange range,
   ) async {
     const url = '$macrodashServerUrl/market/idx';
@@ -170,10 +170,6 @@ class ServerApi {
     } else if (region is MarketIndexRegion) {
       if (category == null) {
         log.severe('Category is required for MarketIndexRegion');
-        return null;
-      }
-      if (category is! MarketIndex) {
-        log.severe('Category must be of type MarketIndex');
         return null;
       }
       return await marketIndexData(region, category, range);

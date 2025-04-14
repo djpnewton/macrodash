@@ -8,6 +8,7 @@ import 'option_buttons.dart';
 import 'vis.dart';
 import 'vis2.dart';
 import 'settings.dart';
+import 'result.dart';
 
 final Logger log = Logger('amount_series_page');
 
@@ -21,6 +22,7 @@ class AmountSeriesPage<T extends Enum, C extends Enum> extends StatefulWidget {
     required this.regionLabels,
     this.categories = const [],
     this.categoryLabels = const [],
+    this.categoryTitles = const [],
   });
 
   final String title;
@@ -30,6 +32,7 @@ class AmountSeriesPage<T extends Enum, C extends Enum> extends StatefulWidget {
   final Map<T, String> regionLabels;
   final List<List<C>> categories;
   final List<Map<C, String>> categoryLabels;
+  final List<String> categoryTitles;
 
   @override
   State<AmountSeriesPage<T, C>> createState() => _AmountSeriesPageState<T, C>();
@@ -61,14 +64,27 @@ class _AmountSeriesPageState<T extends Enum, C extends Enum>
     setState(() {
       _isLoading = true;
     });
-    final data = await _api.fetchAmountSeries(
+    final result = await _api.fetchAmountSeries(
       _selectedRegion,
       _selectedCategory,
       _selectedZoom,
     );
+    switch (result) {
+      case Ok():
+        _amountSeries = result.value;
+      case Error():
+        // show snackbar
+        if (mounted) {
+          var snackBar = SnackBar(
+            content: Text('Unable to get data! - ${result.error}'),
+          );
+          ScaffoldMessenger.of(context).showSnackBar(snackBar);
+        }
+    }
+
     setState(() {
       _isLoading = false;
-      _amountSeries = data;
+      _amountSeries = _amountSeries;
       if (_amountSeries == null) {
         return;
       }
@@ -147,64 +163,87 @@ class _AmountSeriesPageState<T extends Enum, C extends Enum>
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final smallWidth = size.width < 600;
+    final smallHeight = size.height < 400;
+    final hPadding = smallWidth ? 2.0 : 16.0;
+    final vPadding = smallHeight ? 2.0 : 16.0;
+    final popouts = smallWidth || smallHeight;
+    final optionsSide = smallHeight;
+    final regionButtons = OptionButtons<T>(
+      popoutTitle: 'Region',
+      selectedOption: _selectedRegion,
+      values: widget.regions,
+      onOptionSelected: _regionSelect,
+      labels: widget.regionLabels,
+      popout: popouts,
+    );
+    final categoryButtons =
+        (widget.categories.isNotEmpty)
+            ? OptionButtons<C>(
+              popoutTitle: widget.categoryTitles[_getCategoryIndexFromRegion()],
+              selectedOption: _selectedCategory!,
+              values: widget.categories[_getCategoryIndexFromRegion()],
+              onOptionSelected: _categorySelect,
+              labels: widget.categoryLabels[_getCategoryIndexFromRegion()],
+              popout: popouts,
+            )
+            : const SizedBox();
+    final zoomButtons = ZoomButtons(
+      selectedZoom: _selectedZoom,
+      onZoomSelected: (zoomLevel) => _filterData(zoomLevel),
+      popout: popouts,
+    );
+    final Widget options = switch (optionsSide) {
+      true => Padding(
+        padding: EdgeInsets.symmetric(horizontal: 0, vertical: vPadding),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [regionButtons, categoryButtons, zoomButtons],
+        ),
+      ),
+      false => Padding(
+        padding: EdgeInsets.symmetric(horizontal: hPadding, vertical: 0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [regionButtons, categoryButtons, zoomButtons],
+        ),
+      ),
+    };
+    final chart =
+        _isLoading
+            ? Expanded(child: const Center(child: CircularProgressIndicator()))
+            : _amountSeries == null
+            ? Expanded(child: const Center(child: Text('No data available.')))
+            :
+            // Line Chart
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: hPadding,
+                  vertical: vPadding,
+                ),
+                child: switch (widget.chartLibrary) {
+                  ChartLibrary.flChart => Vis(
+                    filteredData: _filteredData,
+                    dataSeries: _amountSeries,
+                    selectedZoom: _selectedZoom,
+                  ),
+                  ChartLibrary.financialChart => VisFinancialChart(
+                    filteredData: _filteredData,
+                    dataSeries: _amountSeries,
+                    selectedZoom: _selectedZoom,
+                  ),
+                },
+              ),
+            );
     return Scaffold(
       appBar: AppBar(title: Text('${widget.title} Data Visualization')),
-      body: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Region Buttons
-              OptionButtons<T>(
-                selectedOption: _selectedRegion,
-                values: widget.regions,
-                onOptionSelected: _regionSelect,
-                labels: widget.regionLabels,
-              ),
-              // Category Buttons
-              (widget.categories.isNotEmpty)
-                  ? OptionButtons<C>(
-                    selectedOption: _selectedCategory!,
-                    values: widget.categories[_getCategoryIndexFromRegion()],
-                    onOptionSelected: _categorySelect,
-                    labels:
-                        widget.categoryLabels[_getCategoryIndexFromRegion()],
-                  )
-                  : const SizedBox(),
-              // Zoom Buttons
-              ZoomButtons(
-                selectedZoom: _selectedZoom,
-                onZoomSelected: (zoomLevel) => _filterData(zoomLevel),
-              ),
-            ],
-          ),
-          _isLoading
-              ? Expanded(
-                child: const Center(child: CircularProgressIndicator()),
-              )
-              : _amountSeries == null
-              ? Expanded(child: const Center(child: Text('No data available.')))
-              :
-              // Line Chart
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: switch (widget.chartLibrary) {
-                    ChartLibrary.flChart => Vis(
-                      filteredData: _filteredData,
-                      dataSeries: _amountSeries,
-                      selectedZoom: _selectedZoom,
-                    ),
-                    ChartLibrary.financialChart => VisFinancialChart(
-                      filteredData: _filteredData,
-                      dataSeries: _amountSeries,
-                      selectedZoom: _selectedZoom,
-                    ),
-                  },
-                ),
-              ),
-        ],
-      ),
+      body:
+          optionsSide
+              ? Row(children: [options, chart])
+              : Column(children: [options, chart]),
     );
   }
 }

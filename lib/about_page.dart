@@ -5,6 +5,7 @@ import 'package:macrodash_models/models.dart';
 import 'helper.dart' as helper;
 import 'config.dart';
 import 'api.dart';
+import 'result.dart';
 
 class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
@@ -29,9 +30,21 @@ class _AboutPageState extends State<AboutPage> {
   }
 
   Future<void> _fetchVersionInfo() async {
-    final versionInfo = await _api.serverVersion();
+    final result = await _api.serverVersion();
+    switch (result) {
+      case Ok():
+        _versionInfo = result.value;
+      case Error():
+        // show snackbar
+        if (mounted) {
+          var snackBar = SnackBar(
+            content: Text('Unable to get version! - ${result.error}'),
+          );
+          ScaffoldMessenger.of(context).showSnackBar(snackBar);
+        }
+    }
     setState(() {
-      _versionInfo = versionInfo;
+      _versionInfo = _versionInfo;
       _isLoading = false;
     });
   }

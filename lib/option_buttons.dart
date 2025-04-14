@@ -33,7 +33,7 @@ class OptionButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(4), // Slightly rounded corners
         ),
         minimumSize: Size.square(35),
-        padding: EdgeInsets.zero,
+        padding: EdgeInsets.symmetric(horizontal: 2),
       ),
       child: Text(
         label,
@@ -55,67 +55,123 @@ class OptionButton extends StatelessWidget {
 class ZoomButtons extends StatelessWidget {
   final DataRange selectedZoom;
   final Function(DataRange) onZoomSelected;
+  final bool popout;
+
+  static const _ranges = [
+    DataRange.oneYear,
+    DataRange.fiveYears,
+    DataRange.tenYears,
+    DataRange.max,
+  ];
+  static const _labels = {
+    DataRange.oneYear: '1Y',
+    DataRange.fiveYears: '5Y',
+    DataRange.tenYears: '10Y',
+    DataRange.max: 'Max',
+  };
+  static const _labelsLong = {
+    DataRange.oneYear: '1 Year',
+    DataRange.fiveYears: '5 Years',
+    DataRange.tenYears: '10 Years',
+    DataRange.max: 'Max',
+  };
 
   const ZoomButtons({
     super.key,
     required this.selectedZoom,
     required this.onZoomSelected,
+    this.popout = false,
   });
+
+  Widget _buildPopout(BuildContext context) {
+    return OptionButtons<DataRange>(
+      popoutTitle: 'Range',
+      selectedOption: selectedZoom,
+      values: _ranges,
+      onOptionSelected: (value) => onZoomSelected(value),
+      labels: _labelsLong,
+      popout: true,
+    );
+  }
+
+  Widget _buildRow(BuildContext context) {
+    return OptionButtons<DataRange>(
+      popoutTitle: 'Range',
+      selectedOption: selectedZoom,
+      values: _ranges,
+      onOptionSelected: (value) => onZoomSelected(value),
+      labels: _labels,
+      popout: false,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (popout) return _buildPopout(context);
+    return _buildRow(context);
+  }
+}
+
+class OptionButtons<T extends Enum> extends StatelessWidget {
+  final String popoutTitle;
+  final T selectedOption;
+  final List<T> values;
+  final Function(T) onOptionSelected;
+  final Map<T, String> labels;
+  final bool popout;
+
+  static const _padding = 2.0;
+
+  const OptionButtons({
+    super.key,
+    required this.popoutTitle,
+    required this.selectedOption,
+    required this.values,
+    required this.onOptionSelected,
+    required this.labels,
+    this.popout = false,
+  });
+
+  Widget _buildPopout(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(8.0),
+      padding: const EdgeInsets.all(_padding),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.end, // Align buttons to the right
         children: [
+          Text('$popoutTitle:', style: const TextStyle(fontSize: 10)),
+          const SizedBox(width: 2),
           OptionButton(
-            label: '1Y',
-            isSelected: selectedZoom == DataRange.oneYear,
-            onPressed: () => onZoomSelected(DataRange.oneYear),
-          ),
-          const SizedBox(width: 1), // Add spacing between buttons
-          OptionButton(
-            label: '5Y',
-            isSelected: selectedZoom == DataRange.fiveYears,
-            onPressed: () => onZoomSelected(DataRange.fiveYears),
-          ),
-          const SizedBox(width: 1), // Add spacing between buttons
-          OptionButton(
-            label: '10Y',
-            isSelected: selectedZoom == DataRange.tenYears,
-            onPressed: () => onZoomSelected(DataRange.tenYears),
-          ),
-          const SizedBox(width: 1), // Add spacing between buttons
-          OptionButton(
-            label: 'Max',
-            isSelected: selectedZoom == DataRange.max,
-            onPressed: () => onZoomSelected(DataRange.max),
+            label: labels[selectedOption] ?? selectedOption.name,
+            isSelected: true,
+            onPressed: () {
+              showDialog<T>(
+                context: context,
+                builder: (context) {
+                  return AlertDialog(
+                    title: Text('Select $popoutTitle'),
+                    content: OptionButtons<T>(
+                      popoutTitle: popoutTitle,
+                      selectedOption: selectedOption,
+                      values: values,
+                      onOptionSelected: (value) {
+                        Navigator.of(context).pop();
+                        onOptionSelected(value);
+                      },
+                      labels: labels,
+                      popout: false,
+                    ),
+                  );
+                },
+              );
+            },
           ),
         ],
       ),
     );
   }
-}
 
-class OptionButtons<T extends Enum> extends StatelessWidget {
-  final T selectedOption;
-  final List<T> values;
-  final Function(T) onOptionSelected;
-  final Map<T, String> labels;
-
-  const OptionButtons({
-    super.key,
-    required this.selectedOption,
-    required this.values,
-    required this.onOptionSelected,
-    required this.labels,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildRow(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(8.0),
+      padding: const EdgeInsets.all(_padding),
       child: Row(
         children:
             values.map((e) {
@@ -137,5 +193,11 @@ class OptionButtons<T extends Enum> extends StatelessWidget {
             }).toList(),
       ),
     );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (popout) return _buildPopout(context);
+    return _buildRow(context);
   }
 }

@@ -99,6 +99,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     regionLabels: bondRateRegionLabels,
                     categories: [BondTerm.values],
                     categoryLabels: [bondTermLabels],
+                    categoryTitles: ['Term'],
                   ),
             ),
           );
@@ -125,6 +126,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       marketIndexEuropeLabels,
                       marketIndexAsiaLabels,
                     ],
+                    categoryTitles: ['Index', 'Index', 'Index'],
                   ),
             ),
           );

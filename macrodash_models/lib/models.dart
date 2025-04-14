@@ -26,6 +26,20 @@ class VersionInfo extends Equatable {
       'VersionInfo(version: $version, minClientVersion: $minClientVersion)';
 }
 
+/// Enum to represent the range of data.
+enum DataRange {
+  oneDay,
+  fiveDays,
+  oneMonth,
+  threeMonths,
+  sixMonths,
+  oneYear,
+  twoYears,
+  fiveYears,
+  tenYears,
+  max,
+}
+
 /// Enum to represent the region for M2 data.
 enum M2Region { usa, euro, japan, all }
 
@@ -50,6 +64,23 @@ final bondRateRegionLabels = {BondRateRegion.usa: 'USA'};
 enum BondTerm { thirtyYear, twentyYear }
 
 final bondTermLabels = {BondTerm.thirtyYear: '30Y', BondTerm.twentyYear: '20Y'};
+
+/// Enum to represent the market index region.
+enum MarketIndexRegion { usa }
+
+final marketIndexRegionLabels = {MarketIndexRegion.usa: 'USA'};
+
+/// Enum to represent the market index
+enum MarketIndex { sp500, nasdaq, dowjones, russell2000, vix, dxy }
+
+final marketIndexLabels = {
+  MarketIndex.sp500: 'S&P 500',
+  MarketIndex.nasdaq: 'NASDAQ',
+  MarketIndex.dowjones: 'Dow Jones',
+  MarketIndex.russell2000: 'Russell 2000',
+  MarketIndex.vix: 'VIX',
+  MarketIndex.dxy: 'DXY',
+};
 
 /// Represents a single entry in price/amount series.
 @JsonSerializable()

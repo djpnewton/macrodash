@@ -4,12 +4,10 @@ import 'package:intl/intl.dart';
 
 import 'package:macrodash_models/models.dart';
 
-import 'option_buttons.dart';
-
 class Vis extends StatelessWidget {
   final List<AmountEntry> filteredData;
   final AmountSeries? dataSeries;
-  final ZoomLevel selectedZoom;
+  final DataRange selectedZoom;
 
   const Vis({
     super.key,
@@ -36,7 +34,7 @@ class Vis extends StatelessWidget {
                 final date = filteredData[index].date;
 
                 switch (selectedZoom) {
-                  case ZoomLevel.oneYear:
+                  case DataRange.oneYear:
                     if (date.day == 1) {
                       return Text(
                         '${date.month}/${date.year}',
@@ -44,8 +42,8 @@ class Vis extends StatelessWidget {
                       );
                     }
                     break;
-                  case ZoomLevel.fiveYears:
-                  case ZoomLevel.tenYears:
+                  case DataRange.fiveYears:
+                  case DataRange.tenYears:
                     if (date.month == 1) {
                       return Text(
                         '${date.year}',
@@ -53,7 +51,7 @@ class Vis extends StatelessWidget {
                       );
                     }
                     break;
-                  case ZoomLevel.max:
+                  case DataRange.max:
                     if (date.year % 10 == 0 && date.month == 1) {
                       return Text(
                         '${date.year}',
@@ -61,6 +59,8 @@ class Vis extends StatelessWidget {
                       );
                     }
                     break;
+                  default:
+                    throw Exception('Invalid zoom level');
                 }
                 return const SizedBox.shrink();
               },
@@ -95,13 +95,15 @@ class Vis extends StatelessWidget {
             }
             final date = filteredData[index].date;
             switch (selectedZoom) {
-              case ZoomLevel.oneYear:
+              case DataRange.oneYear:
                 return date.day == 1;
-              case ZoomLevel.fiveYears:
-              case ZoomLevel.tenYears:
+              case DataRange.fiveYears:
+              case DataRange.tenYears:
                 return date.month == 1;
-              case ZoomLevel.max:
+              case DataRange.max:
                 return date.year % 10 == 0 && date.month == 1;
+              default:
+                throw Exception('Invalid zoom level');
             }
           },
           verticalInterval: 1,

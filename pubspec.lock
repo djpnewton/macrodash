@@ -181,10 +181,10 @@ packages:
     dependency: "direct main"
     description:
       name: financial_chart
-      sha256: "637119d58d0815d35ebce563e97ae542b293b8c9823ea1128a5a028076dd68aa"
+      sha256: "9e198af7c08018660244cc1a2bf921933043550f585e1e8b26b0fcb919f5b254"
       url: "https://pub.dev"
     source: hosted
-    version: "0.1.8"
+    version: "0.2.0"
   fl_chart:
     dependency: "direct main"
     description:

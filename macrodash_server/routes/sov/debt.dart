@@ -7,7 +7,7 @@ import '_middleware.dart';
 final _log = Logger('sov_debt');
 
 Future<Response> onRequest(RequestContext context) async {
-  final dataDownloader = context.read<DataDownloader>();
+  final dataDownloader = context.read<SovData>();
 
   final request = context.request;
   final params = request.uri.queryParameters;
@@ -47,7 +47,7 @@ Future<Response> onRequest(RequestContext context) async {
   switch (region) {
     case DebtRegion.all:
     case DebtRegion.usa:
-      sources = [DataDownloader.usTreasurySource];
+      sources = [SovData.usTreasurySource];
   }
 
   final result = AmountSeries(

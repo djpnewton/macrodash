@@ -43,7 +43,7 @@ class _AmountSeriesPageState<T extends Enum, C extends Enum>
   bool _isLoading = true;
   late T _selectedRegion;
   C? _selectedCategory;
-  ZoomLevel _selectedZoom = ZoomLevel.max; // Default to 'Max'
+  DataRange _selectedZoom = DataRange.max; // Default to 'Max'
 
   @override
   void initState() {
@@ -64,6 +64,7 @@ class _AmountSeriesPageState<T extends Enum, C extends Enum>
     final data = await _api.fetchAmountSeries(
       _selectedRegion,
       _selectedCategory,
+      _selectedZoom,
     );
     setState(() {
       _isLoading = false;
@@ -71,7 +72,7 @@ class _AmountSeriesPageState<T extends Enum, C extends Enum>
       if (_amountSeries == null) {
         return;
       }
-      _filterData(_selectedZoom);
+      _applyFilter(_selectedZoom);
     });
   }
 
@@ -89,24 +90,31 @@ class _AmountSeriesPageState<T extends Enum, C extends Enum>
     });
   }
 
-  void _filterData(ZoomLevel zoomLevel) {
+  void _filterData(DataRange zoomLevel) {
     setState(() {
       _selectedZoom = zoomLevel;
+      _fetchData().then((_) {
+        _applyFilter(zoomLevel);
+      });
+    });
+  }
 
+  void _applyFilter(DataRange zoomLevel) {
+    setState(() {
       if (_amountSeries == null) {
         log.severe('No series data available to filter.');
         return;
       }
 
-      if (zoomLevel == ZoomLevel.max) {
+      if (zoomLevel == DataRange.max) {
         // Show all data (Max)
         _filteredData = _amountSeries!.data;
       } else {
         final years =
             {
-              ZoomLevel.oneYear: 1,
-              ZoomLevel.fiveYears: 5,
-              ZoomLevel.tenYears: 10,
+              DataRange.oneYear: 1,
+              DataRange.fiveYears: 5,
+              DataRange.tenYears: 10,
             }[zoomLevel]!;
 
         final cutoffDate = DateTime.now().subtract(Duration(days: years * 365));

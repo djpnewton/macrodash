@@ -5,6 +5,7 @@ import 'package:csv/csv.dart';
 import 'package:http/http.dart' as http;
 import 'package:logging/logging.dart';
 import 'package:macrodash_models/models.dart';
+import 'package:macrodash_server/abstract_downloader.dart';
 import 'package:quiver/time.dart';
 
 /// Wrap AmountSeries with a bond term
@@ -22,9 +23,9 @@ class BondRateData {
 /// A class that handles downloading and parsing data from various sources.
 /// It provides methods to download and parse data related to M2 money supply,
 /// exchange rates, and sovereign debt.
-class DataDownloader {
-  /// Creates an instance of [DataDownloader] with the provided FRED API key.
-  DataDownloader({required String fredApiKey}) : _fredApiKey = fredApiKey;
+class SovData extends AbstractDownloader {
+  /// Creates an instance of [SovData] with the provided FRED API key.
+  SovData({required String fredApiKey}) : _fredApiKey = fredApiKey;
 
   /// FRED data source
   static const String fredSource = 'https://fred.stlouisfed.org/';
@@ -36,38 +37,7 @@ class DataDownloader {
   static const String usTreasurySource = 'https://fiscaldata.treasury.gov/';
 
   final String _fredApiKey;
-  final Logger _log = Logger('DataDownloader');
-
-  /// Downloads a file from the given [url] and returns its content as a
-  /// [String].
-  Future<String?> _downloadFile(
-    String url,
-    Map<String, dynamic>? queryParameters,
-  ) async {
-    try {
-      var uri = Uri.parse(url);
-      if (queryParameters != null) {
-        uri = uri.replace(queryParameters: queryParameters);
-      }
-      _log.info('Downloading file from $url with params: $queryParameters');
-
-      // Fetch the file from the URL
-      final response = await http.get(uri);
-
-      if (response.statusCode == 200) {
-        _log.info('File downloaded successfully from $url');
-        return response.body; // Return the file content as a String
-      } else {
-        _log.warning(
-          'Failed to download file. Status code: ${response.statusCode}',
-        );
-        return null;
-      }
-    } catch (e) {
-      _log.severe('Error downloading file: $e');
-      return null;
-    }
-  }
+  final Logger _log = Logger('SovData');
 
   Future<String?> _downloadFredJapUsdData() async {
     const url = 'https://api.stlouisfed.org/fred/series/observations';
@@ -77,28 +47,28 @@ class DataDownloader {
       'file_type': 'json',
     };
 
-    return _downloadFile(url, queryParameters);
+    return downloadFile(url, queryParameters);
   }
 
   /// Downloads the latest JAPAN M2 data in JSON format from the ECB API
   Future<String?> _downloadJapanM2Data() async {
     const url =
         'https://sdw-wsrest.ecb.europa.eu/service/data/RTD/M.JP.Y.M_M2.J';
-    return _downloadFile(url, {'format': 'jsondata'});
+    return downloadFile(url, {'format': 'jsondata'});
   }
 
   /// Downloads the latest USD/EUR data in JSON format from the ECB API
   Future<String?> downloadEcbUsdEuroData() async {
     const url =
         'https://sdw-wsrest.ecb.europa.eu/service/data/EXR/D.USD.EUR.SP00.A';
-    return _downloadFile(url, {'format': 'jsondata'});
+    return downloadFile(url, {'format': 'jsondata'});
   }
 
   /// Downloads the latest EU M2 data in JSON format from the ECB API
   Future<String?> _downloadEcbM2Data() async {
     const url =
         'https://sdw-wsrest.ecb.europa.eu/service/data/BSI/M.U2.Y.V.M20.X.1.U2.2300.Z01.E';
-    return _downloadFile(url, {'format': 'jsondata'});
+    return downloadFile(url, {'format': 'jsondata'});
   }
 
   /// Downloads the latest USA M2 data in CSV format from the FRED API and
@@ -156,7 +126,7 @@ class DataDownloader {
     }
     const url =
         'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_to_penny';
-    return _downloadFile(url, queryParameters);
+    return downloadFile(url, queryParameters);
   }
 
   /// Downloads the latest US Bond Rate data in JSON format from the treasury
@@ -176,7 +146,7 @@ class DataDownloader {
     }
     const url =
         'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/auctions_query';
-    return _downloadFile(url, queryParameters);
+    return downloadFile(url, queryParameters);
   }
 
   /// Fetches and parses the Jap/US Dollar exchange rate

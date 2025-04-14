@@ -7,7 +7,7 @@ import '_middleware.dart';
 final _log = Logger('sov_bond_rates');
 
 Future<Response> onRequest(RequestContext context) async {
-  final dataDownloader = context.read<DataDownloader>();
+  final dataDownloader = context.read<SovData>();
 
   final request = context.request;
   final params = request.uri.queryParameters;
@@ -56,7 +56,7 @@ Future<Response> onRequest(RequestContext context) async {
   List<String> sources;
   switch (region) {
     case BondRateRegion.usa:
-      sources = [DataDownloader.usTreasurySource];
+      sources = [SovData.usTreasurySource];
   }
 
   final description = switch (term) {

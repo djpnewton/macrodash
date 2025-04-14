@@ -119,10 +119,39 @@ class ServerApi {
     return bondRates;
   }
 
+  /// Fetches and parses the market index data into an AmountSeries object.
+  Future<AmountSeries?> marketIndexData(
+    MarketIndexRegion region,
+    MarketIndex index,
+    DataRange range,
+  ) async {
+    const url = '$macrodashServerUrl/market/idx';
+
+    final queryParameters = {
+      'region': region.name,
+      'index': index.name,
+      'range': range.name,
+    };
+    final marketIndexData = await downloadFile(url, queryParameters);
+    if (marketIndexData == null) {
+      log.severe('Failed to download market index data from $url');
+      return null;
+    }
+    final marketIndexJson = jsonDecode(marketIndexData);
+    if (marketIndexJson == null) {
+      log.severe('Failed to parse market index data from $url');
+      return null;
+    }
+    final marketIndex = AmountSeries.fromJson(marketIndexJson);
+    log.info('Market index data downloaded successfully from $url');
+    return marketIndex;
+  }
+
   /// Generic function to fetch AmountSeries based on the enum type.
   Future<AmountSeries?> fetchAmountSeries<T extends Enum, C extends Enum>(
     T region,
     C? category,
+    DataRange range,
   ) async {
     if (region is M2Region) {
       return await m2Data(region);
@@ -138,6 +167,16 @@ class ServerApi {
         return null;
       }
       return await bondRateData(region, category);
+    } else if (region is MarketIndexRegion) {
+      if (category == null) {
+        log.severe('Category is required for MarketIndexRegion');
+        return null;
+      }
+      if (category is! MarketIndex) {
+        log.severe('Category must be of type MarketIndex');
+        return null;
+      }
+      return await marketIndexData(region, category, range);
     } else {
       log.severe('Unsupported region type: ${region.runtimeType}');
       return null;

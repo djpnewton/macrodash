@@ -7,7 +7,7 @@ import '_middleware.dart';
 final _log = Logger('sov_m2');
 
 Future<Response> onRequest(RequestContext context) async {
-  final dataDownloader = context.read<DataDownloader>();
+  final dataDownloader = context.read<SovData>();
 
   final request = context.request;
   final params = request.uri.queryParameters;
@@ -76,13 +76,13 @@ Future<Response> onRequest(RequestContext context) async {
   switch (region) {
     case M2Region.japan:
     case M2Region.euro:
-      sources = [DataDownloader.ecbSource];
+      sources = [SovData.ecbSource];
     case M2Region.usa:
-      sources = [DataDownloader.fredSource];
+      sources = [SovData.fredSource];
     case M2Region.all:
       sources = [
-        DataDownloader.fredSource,
-        DataDownloader.ecbSource,
+        SovData.fredSource,
+        SovData.ecbSource,
       ];
   }
 

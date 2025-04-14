@@ -10,7 +10,7 @@ import 'package:macrodash_models/models.dart';
 
 final log = Logger('mainlogger');
 
-enum AppPage { m2, debt, bondRates, settings, about }
+enum AppPage { m2, debt, bondRates, indexes, settings, about }
 
 void main() {
   Logger.root.level = Level.ALL; // defaults to Level.INFO
@@ -50,9 +50,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   void _navigateToPage(AppPage page) async {
-    // get the chart library setting
     final chartLibrary = await Settings.loadChartLibrary();
-    // navigate to the selected page
     if (mounted) {
       switch (page) {
         case AppPage.m2:
@@ -101,6 +99,24 @@ class _MyHomePageState extends State<MyHomePage> {
                     regionLabels: bondRateRegionLabels,
                     categories: BondTerm.values,
                     categoryLabels: bondTermLabels,
+                  ),
+            ),
+          );
+          break;
+        case AppPage.indexes:
+          log.info('Navigating to Indexes');
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) => AmountSeriesPage(
+                    title: 'Indexes',
+                    chartLibrary: chartLibrary,
+                    defaultRegion: MarketIndexRegion.usa,
+                    regions: MarketIndexRegion.values,
+                    regionLabels: marketIndexRegionLabels,
+                    categories: MarketIndex.values,
+                    categoryLabels: marketIndexLabels,
                   ),
             ),
           );
@@ -165,6 +181,14 @@ class _MyHomePageState extends State<MyHomePage> {
               onTap: () {
                 Navigator.pop(context); // Close the drawer
                 _navigateToPage(AppPage.bondRates);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.bar_chart),
+              title: const Text('Indexes'),
+              onTap: () {
+                Navigator.pop(context); // Close the drawer
+                _navigateToPage(AppPage.indexes);
               },
             ),
             ListTile(

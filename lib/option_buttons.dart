@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:macrodash_models/models.dart';
+
 class OptionButton extends StatelessWidget {
   final String label;
   final bool isSelected;
@@ -50,11 +52,9 @@ class OptionButton extends StatelessWidget {
   }
 }
 
-enum ZoomLevel { oneYear, fiveYears, tenYears, max }
-
 class ZoomButtons extends StatelessWidget {
-  final ZoomLevel selectedZoom;
-  final Function(ZoomLevel) onZoomSelected;
+  final DataRange selectedZoom;
+  final Function(DataRange) onZoomSelected;
 
   const ZoomButtons({
     super.key,
@@ -71,26 +71,26 @@ class ZoomButtons extends StatelessWidget {
         children: [
           OptionButton(
             label: '1Y',
-            isSelected: selectedZoom == ZoomLevel.oneYear,
-            onPressed: () => onZoomSelected(ZoomLevel.oneYear),
+            isSelected: selectedZoom == DataRange.oneYear,
+            onPressed: () => onZoomSelected(DataRange.oneYear),
           ),
           const SizedBox(width: 1), // Add spacing between buttons
           OptionButton(
             label: '5Y',
-            isSelected: selectedZoom == ZoomLevel.fiveYears,
-            onPressed: () => onZoomSelected(ZoomLevel.fiveYears),
+            isSelected: selectedZoom == DataRange.fiveYears,
+            onPressed: () => onZoomSelected(DataRange.fiveYears),
           ),
           const SizedBox(width: 1), // Add spacing between buttons
           OptionButton(
             label: '10Y',
-            isSelected: selectedZoom == ZoomLevel.tenYears,
-            onPressed: () => onZoomSelected(ZoomLevel.tenYears),
+            isSelected: selectedZoom == DataRange.tenYears,
+            onPressed: () => onZoomSelected(DataRange.tenYears),
           ),
           const SizedBox(width: 1), // Add spacing between buttons
           OptionButton(
             label: 'Max',
-            isSelected: selectedZoom == ZoomLevel.max,
-            onPressed: () => onZoomSelected(ZoomLevel.max),
+            isSelected: selectedZoom == DataRange.max,
+            onPressed: () => onZoomSelected(DataRange.max),
           ),
         ],
       ),

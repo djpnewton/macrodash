@@ -217,7 +217,7 @@ class SovData extends AbstractDownloader {
       return null;
     }
 
-    return _parseEcbM2Data(jsonData, '0:0:0:0:0', 1, 1 / rate);
+    return _parseEcbM2Data(jsonData, '0:0:0:0:0', 0.001, 1 / rate);
   }
 
   /// Fetches and parses the ECB M2 data into a list of AmountEntry objects.
@@ -237,7 +237,7 @@ class SovData extends AbstractDownloader {
     return _parseEcbM2Data(
       jsonData,
       '0:0:0:0:0:0:0:0:0:0:0',
-      0.001,
+      0.000001,
       rate,
     );
   }
@@ -283,7 +283,7 @@ class SovData extends AbstractDownloader {
           date: date,
           amount: amount.toDouble() *
               scale *
-              xxxUsdRate, // convert to billions of dollars
+              xxxUsdRate, // convert to trillions of dollars
         );
       }).toList();
 
@@ -332,7 +332,7 @@ class SovData extends AbstractDownloader {
               );
               final amount =
                   double.tryParse(row[m2slIndex]?.toString() ?? '') ?? 0.0;
-              return AmountEntry(date: date, amount: amount);
+              return AmountEntry(date: date, amount: amount * 0.001);
             } catch (e) {
               _log.warning('Error parsing row: $row. Skipping.');
               return null; // Skip invalid rows

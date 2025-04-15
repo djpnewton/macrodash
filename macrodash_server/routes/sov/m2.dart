@@ -87,7 +87,7 @@ Future<Response> onRequest(RequestContext context) async {
   }
 
   final result = AmountSeries(
-    description: 'Billions of Dollars',
+    description: 'Trillions of Dollars',
     sources: sources,
     data: m2Data,
   );

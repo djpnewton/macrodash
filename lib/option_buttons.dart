@@ -2,22 +2,56 @@ import 'package:flutter/material.dart';
 
 import 'package:macrodash_models/models.dart';
 
+import 'helper.dart';
+
 class OptionButton extends StatelessWidget {
   final String label;
   final bool isSelected;
   final VoidCallback onPressed;
+  final IconData? icon;
 
   const OptionButton({
     super.key,
     required this.label,
     required this.isSelected,
     required this.onPressed,
+    this.icon,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context); // Access the current theme
-
+    if (icon != null) {
+      return Container(
+        width: 35,
+        height: 35,
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        decoration: BoxDecoration(
+          color:
+              isSelected
+                  ? theme
+                      .colorScheme
+                      .primary // Use primary color for selected
+                  : theme
+                      .colorScheme
+                      .surfaceContainer, // Use surface color for unselected
+          borderRadius: BorderRadius.circular(4), // Slightly rounded corners
+        ),
+        child: IconButton(
+          padding: EdgeInsets.all(0),
+          icon: Icon(icon),
+          onPressed: onPressed,
+          color:
+              isSelected
+                  ? theme
+                      .colorScheme
+                      .onPrimary // Text color for selected
+                  : theme.colorScheme.onSurface, // Text color for unselected
+          iconSize: 20,
+        ),
+      );
+    }
+    // If no icon is provided, use a TextButton
     return TextButton(
       onPressed: onPressed,
       style: TextButton.styleFrom(
@@ -199,5 +233,28 @@ class OptionButtons<T extends Enum> extends StatelessWidget {
   Widget build(BuildContext context) {
     if (popout) return _buildPopout(context);
     return _buildRow(context);
+  }
+}
+
+/// a fullscreen button implementing optionbutton
+class FullscreenButton extends StatelessWidget {
+  const FullscreenButton({super.key});
+
+  void _toggleFullscreen() {
+    if (isFullscreen()) {
+      exitFullscreen();
+    } else {
+      enterFullscreen();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return OptionButton(
+      label: '',
+      isSelected: isFullscreen(),
+      onPressed: () => _toggleFullscreen(),
+      icon: isFullscreen() ? Icons.fullscreen_exit : Icons.fullscreen,
+    );
   }
 }

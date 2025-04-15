@@ -5,3 +5,15 @@ import 'helper_stub.dart'
 void reloadPage() {
   reloadPageImpl();
 }
+
+void enterFullscreen() {
+  enterFullscreenImpl();
+}
+
+bool isFullscreen() {
+  return isFullscreenImpl();
+}
+
+void exitFullscreen() {
+  exitFullscreenImpl();
+}

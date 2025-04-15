@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
+import 'package:flutter/foundation.dart';
 
 import 'package:macrodash_models/models.dart';
 
@@ -170,6 +171,7 @@ class _AmountSeriesPageState<T extends Enum, C extends Enum>
     final vPadding = smallHeight ? 2.0 : 16.0;
     final popouts = smallWidth || smallHeight;
     final optionsSide = smallHeight;
+    final fullscreenButton = FullscreenButton();
     final regionButtons = OptionButtons<T>(
       popoutTitle: 'Region',
       selectedOption: _selectedRegion,
@@ -239,7 +241,10 @@ class _AmountSeriesPageState<T extends Enum, C extends Enum>
               ),
             );
     return Scaffold(
-      appBar: AppBar(title: Text('${widget.title} Data Visualization')),
+      appBar: AppBar(
+        title: Text('${widget.title} Data Visualization'),
+        actions: [if (kIsWeb) fullscreenButton],
+      ),
       body:
           optionsSide
               ? Row(children: [options, chart])

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'config.dart';
 import 'settings.dart';
@@ -155,6 +156,22 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
+        actions: [
+          TextButton(
+            onPressed: () {
+              // Open the TaxMap website
+              const url = 'https://taxmap.me';
+              launchUrl(Uri.parse(url));
+            },
+            child: const Text(
+              'Visit taxmap.me',
+              style: TextStyle(
+                fontSize: 12, // Small text
+                color: Colors.white, // Text color
+              ),
+            ),
+          ),
+        ],
       ),
       drawer: Drawer(
         child: ListView(

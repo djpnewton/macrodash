@@ -1,3 +1,0 @@
-#!/bin/sh
-
-export FRED_API_KEY=29018180231b5a66c62f55aa3281719b

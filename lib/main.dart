@@ -152,26 +152,39 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final isNarrow = MediaQuery.of(context).size.width < 520;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
-        actions: [
-          TextButton(
-            onPressed: () {
-              // Open the TaxMap website
-              const url = 'https://taxmap.me';
-              launchUrl(Uri.parse(url));
-            },
-            child: const Text(
-              'Visit taxmap.me',
-              style: TextStyle(
-                fontSize: 12, // Small text
-                color: Colors.white, // Text color
-              ),
-            ),
-          ),
-        ],
+        actions:
+            isNarrow
+                ? null
+                : [
+                  TextButton.icon(
+                    onPressed: () {
+                      const url = 'https://github.com/djpnewton/macrodash';
+                      launchUrl(Uri.parse(url));
+                    },
+                    icon: const Icon(Icons.code, size: 12),
+                    label: const Text(
+                      'Contribute on GitHub',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: () {
+                      const url = 'https://taxmap.me';
+                      launchUrl(Uri.parse(url));
+                    },
+                    icon: const Icon(Icons.public, size: 12),
+                    label: const Text(
+                      'Visit taxmap.me',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ],
       ),
       drawer: Drawer(
         child: ListView(
@@ -218,6 +231,24 @@ class _MyHomePageState extends State<MyHomePage> {
                 _navigateToPage(AppPage.indexes);
               },
             ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.code),
+              title: const Text('Contribute on GitHub'),
+              onTap: () {
+                const url = 'https://github.com/djpnewton/macrodash';
+                launchUrl(Uri.parse(url));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.public),
+              title: const Text('Visit taxmap.me'),
+              onTap: () {
+                const url = 'https://taxmap.me';
+                launchUrl(Uri.parse(url));
+              },
+            ),
+            const Divider(),
             ListTile(
               leading: const Icon(Icons.settings),
               title: const Text('Settings'),

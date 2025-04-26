@@ -106,6 +106,16 @@ final marketIndexAsiaLabels = {
   MarketIndexAsia.nifty50: 'Nifty 50',
 };
 
+enum MarketCap { metals, crypto, stocks, currencies, all }
+
+final marketCapLabels = {
+  MarketCap.metals: 'Metals',
+  MarketCap.crypto: 'Crypto',
+  MarketCap.stocks: 'Stocks',
+  MarketCap.currencies: 'Currencies',
+  MarketCap.all: 'All',
+};
+
 /// Represents a single entry in price/amount series.
 @JsonSerializable()
 class AmountEntry extends Equatable {
@@ -154,4 +164,74 @@ class AmountSeries extends Equatable {
   @override
   String toString() =>
       'AmountSeries(description: $description, sources: $sources, data: $data)';
+}
+
+@JsonSerializable()
+class MarketCapEntry extends Equatable {
+  final double supply;
+  final double price;
+  final double marketCap;
+  final String ticker;
+  final String name;
+  final String? image;
+  final MarketCap type;
+
+  const MarketCapEntry({
+    required this.supply,
+    required this.price,
+    required this.marketCap,
+    required this.ticker,
+    required this.name,
+    required this.image,
+    required this.type,
+  });
+
+  /// Creates an instance of [MarketCapEntry] from a JSON map.
+  factory MarketCapEntry.fromJson(Map<String, dynamic> json) =>
+      _$MarketCapEntryFromJson(json);
+
+  /// Converts the instance of [MarketCapEntry] to a JSON map.
+  Map<String, dynamic> toJson() => _$MarketCapEntryToJson(this);
+
+  @override
+  List<Object?> get props => [
+    supply,
+    price,
+    marketCap,
+    ticker,
+    name,
+    image,
+    type,
+  ];
+
+  @override
+  String toString() =>
+      'MarketCapEntry(supply: $supply, price: $price, marketCap: $marketCap, ticker: $ticker, name: $name, type: $type)';
+}
+
+@JsonSerializable()
+class MarketCapSeries extends Equatable {
+  final String description;
+  final List<String> sources;
+  final List<MarketCapEntry> data;
+
+  const MarketCapSeries({
+    required this.description,
+    required this.sources,
+    required this.data,
+  });
+
+  /// Creates an instance of [MarketCapSeries] from a JSON map.
+  factory MarketCapSeries.fromJson(Map<String, dynamic> json) =>
+      _$MarketCapSeriesFromJson(json);
+
+  /// Converts the instance of [MarketCapSeries] to a JSON map.
+  Map<String, dynamic> toJson() => _$MarketCapSeriesToJson(this);
+
+  @override
+  List<Object?> get props => [description, sources, data];
+
+  @override
+  String toString() =>
+      'MarketCapSeries(description: $description, sources: $sources, data: $data)';
 }

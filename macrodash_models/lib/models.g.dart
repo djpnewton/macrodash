@@ -48,6 +48,15 @@ MarketCapEntry _$MarketCapEntryFromJson(Map<String, dynamic> json) =>
     MarketCapEntry(
       supply: (json['supply'] as num).toDouble(),
       price: (json['price'] as num).toDouble(),
+      sparkline:
+          (json['sparkline'] as List<dynamic>?)?.map((e) => e as num?).toList(),
+      sparklineTimestamps:
+          (json['sparklineTimestamps'] as List<dynamic>?)
+              ?.map((e) => (e as num).toInt())
+              .toList(),
+      high24h: (json['high24h'] as num).toDouble(),
+      low24h: (json['low24h'] as num).toDouble(),
+      priceChangePercent24h: (json['priceChangePercent24h'] as num).toDouble(),
       marketCap: (json['marketCap'] as num).toDouble(),
       ticker: json['ticker'] as String,
       name: json['name'] as String,
@@ -59,6 +68,11 @@ Map<String, dynamic> _$MarketCapEntryToJson(MarketCapEntry instance) =>
     <String, dynamic>{
       'supply': instance.supply,
       'price': instance.price,
+      'sparkline': instance.sparkline,
+      'sparklineTimestamps': instance.sparklineTimestamps,
+      'high24h': instance.high24h,
+      'low24h': instance.low24h,
+      'priceChangePercent24h': instance.priceChangePercent24h,
       'marketCap': instance.marketCap,
       'ticker': instance.ticker,
       'name': instance.name,

@@ -121,10 +121,11 @@ class MarketData extends AbstractDownloader {
     return entries;
   }
 
-  Future<double?> _tickerPrice(String ticker) async {
+  Future<MarketCapEntry?> _tickerMarketCap(
+      String ticker, double supply, String name, MarketCap type) async {
     // Fetch the data from Yahoo Finance
     final url = 'https://query2.finance.yahoo.com/v8/finance/chart/$ticker';
-    final data = await downloadFile(url, {'interval': '1m', 'range': '1d'});
+    final data = await downloadFile(url, {'interval': '1h', 'range': '5d'});
     if (data == null) {
       _log.warning('Failed to download data for ticker: $ticker');
       return null;
@@ -132,86 +133,114 @@ class MarketData extends AbstractDownloader {
     // Parse the data into a list of AmountEntry objects
     final parsedData = jsonDecode(data) as Map<String, dynamic>;
     // ignore: avoid_dynamic_calls
-    return parsedData['chart']['result'][0]['meta']['regularMarketPrice']
+    final price = parsedData['chart']['result'][0]['meta']['regularMarketPrice']
         as double;
+    // ignore: avoid_dynamic_calls
+    final sparkline = (parsedData['chart']['result'][0]['indicators']['quote']
+            [0]['close'] as List<dynamic>)
+        .map((e) => e as num?)
+        .toList();
+    final sparklineTimestamps =
+        // ignore: avoid_dynamic_calls
+        (parsedData['chart']['result'][0]['timestamp'] as List<dynamic>)
+            .map((e) => e as int)
+            .toList();
+    double priceChangePercent24h = 0;
+    if (sparkline.length > 24 && sparkline[sparkline.length - 1 - 24] != null) {
+      final price24hoursAgo = sparkline[sparkline.length - 1 - 24]!.toDouble();
+      priceChangePercent24h =
+          ((price - price24hoursAgo) / price24hoursAgo) * 100;
+    } else {
+      _log.warning('Failed to get price 24 hours ago for ticker: $ticker');
+    }
+    final marketCap = price * supply;
+    // ignore: avoid_dynamic_calls
+    final high24h = parsedData['chart']['result'][0]['meta']
+        ['regularMarketDayHigh'] as double;
+    // ignore: avoid_dynamic_calls
+    final low24h = parsedData['chart']['result'][0]['meta']
+        ['regularMarketDayLow'] as double;
+    return MarketCapEntry(
+      supply: supply,
+      price: price,
+      sparkline: sparkline,
+      sparklineTimestamps: sparklineTimestamps,
+      high24h: high24h,
+      low24h: low24h,
+      priceChangePercent24h: priceChangePercent24h,
+      marketCap: marketCap,
+      ticker: ticker,
+      name: name,
+      image: null,
+      type: type,
+    );
   }
 
   Future<List<MarketCapEntry>?> _marketCapMetals() async {
-    // get gold price from yahoo finance
-    final goldPrice = await _tickerPrice('GC=F');
-    if (goldPrice == null) {
+    // get gold market cap from yahoo finance
+    final goldMarketCap = await _tickerMarketCap(
+      'GC=F',
+      _goldOunces.toDouble(),
+      'Gold',
+      MarketCap.metals,
+    );
+    if (goldMarketCap == null) {
       _log.warning('Failed to download data for ticker: GC=F');
       return null;
     }
-    // get silver price from yahoo finance
-    final silverPrice = await _tickerPrice('SI=F');
-    if (silverPrice == null) {
+    // get silver market cap from yahoo finance
+    final silverMarketCap = await _tickerMarketCap(
+      'SI=F',
+      _silverOunces.toDouble(),
+      'Silver',
+      MarketCap.metals,
+    );
+    if (silverMarketCap == null) {
       _log.warning('Failed to download data for ticker: SI=F');
       return null;
     }
-    // get platinum price from yahoo finance
-    final platinumPrice = await _tickerPrice('PL=F');
-    if (platinumPrice == null) {
+    // get platinum market cap from yahoo finance
+    final platinumMarketCap = await _tickerMarketCap(
+      'PL=F',
+      _platinumOunces.toDouble(),
+      'Platinum',
+      MarketCap.metals,
+    );
+    if (platinumMarketCap == null) {
       _log.warning('Failed to download data for ticker: PL=F');
       return null;
     }
-    // get palladium price from yahoo finance
-    final palladiumPrice = await _tickerPrice('PA=F');
-    if (palladiumPrice == null) {
+    // get palladium market cap from yahoo finance
+    final palladiumMarketCap = await _tickerMarketCap(
+      'PA=F',
+      _palladiumOunces.toDouble(),
+      'Palladium',
+      MarketCap.metals,
+    );
+    if (palladiumMarketCap == null) {
       _log.warning('Failed to download data for ticker: PA=F');
       return null;
     }
-    // calculate the market cap
-    final goldMarketCap = goldPrice * _goldOunces;
-    final silverMarketCap = silverPrice * _silverOunces;
-    final platinumMarketCap = platinumPrice * _platinumOunces;
-    final palladiumMarketCap = palladiumPrice * _palladiumOunces;
     // create the market cap entries
-    final entries = <MarketCapEntry>[
-      MarketCapEntry(
-        supply: _goldOunces.toDouble(),
-        price: goldPrice,
-        marketCap: goldMarketCap,
-        ticker: 'GC=F',
-        name: 'Gold',
-        image: null,
-        type: MarketCap.metals,
-      ),
-      MarketCapEntry(
-        supply: _silverOunces.toDouble(),
-        price: silverPrice,
-        marketCap: silverMarketCap,
-        ticker: 'SI=F',
-        name: 'Silver',
-        image: null,
-        type: MarketCap.metals,
-      ),
-      MarketCapEntry(
-        supply: _platinumOunces.toDouble(),
-        price: platinumPrice,
-        marketCap: platinumMarketCap,
-        ticker: 'PL=F',
-        name: 'Platinum',
-        image: null,
-        type: MarketCap.metals,
-      ),
-      MarketCapEntry(
-        supply: _palladiumOunces.toDouble(),
-        price: palladiumPrice,
-        marketCap: palladiumMarketCap,
-        ticker: 'PA=F',
-        name: 'Palladium',
-        image: null,
-        type: MarketCap.metals,
-      ),
+    return [
+      goldMarketCap,
+      silverMarketCap,
+      platinumMarketCap,
+      palladiumMarketCap,
     ];
-    return entries;
   }
 
   Future<List<MarketCapEntry>?> _marketCapCrypto() async {
     // get crypto market cap from coin gecko
     const url = 'https://api.coingecko.com/api/v3/coins/markets';
-    final data = await downloadFile(url, {'vs_currency': 'usd'});
+    final data = await downloadFile(url, {
+      'vs_currency': 'usd',
+      'order': 'market_cap_desc',
+      'per_page': '150',
+      'page': '1',
+      'sparkline': 'true',
+      'price_change_percentage': '1h,24h,7d'
+    });
     if (data == null) {
       _log.warning('Failed to download crypto data');
       return null;
@@ -224,6 +253,17 @@ class MarketData extends AbstractDownloader {
               supply: (e['circulating_supply'] as num).toDouble(),
               // ignore: avoid_dynamic_calls
               price: (e['current_price'] as num).toDouble(),
+              // ignore: avoid_dynamic_calls
+              sparkline: (e['sparkline_in_7d']['price'] as List<dynamic>)
+                  .map((e) => e as double)
+                  .toList(),
+              // ignore: avoid_dynamic_calls
+              high24h: (e['high_24h'] as num).toDouble(),
+              // ignore: avoid_dynamic_calls
+              low24h: (e['low_24h'] as num).toDouble(),
+              priceChangePercent24h:
+                  // ignore: avoid_dynamic_calls
+                  (e['price_change_percentage_24h'] as num).toDouble(),
               // ignore: avoid_dynamic_calls
               marketCap: (e['market_cap'] as num).toDouble(),
               // ignore: avoid_dynamic_calls

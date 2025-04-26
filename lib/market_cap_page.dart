@@ -7,6 +7,7 @@ import 'package:macrodash_models/models.dart';
 import 'api.dart';
 import 'option_buttons.dart';
 import 'result.dart';
+import 'sparkline.dart';
 
 final Logger log = Logger('market_cap_page');
 
@@ -80,9 +81,35 @@ class _MarketCapPageState extends State<MarketCapPage> {
     }
   }
 
+  String _formatPrice(double price) {
+    if (price >= 1e6) {
+      return '\$${(price / 1e6).toStringAsFixed(2)} M';
+    } else if (price >= 1e3) {
+      return '\$${(price / 1e3).toStringAsFixed(2)} K';
+    } else {
+      return '\$${price.toStringAsFixed(2)}';
+    }
+  }
+
+  Text _formatPriceChange(double priceChange) {
+    if (priceChange > 0) {
+      return Text(
+        '${priceChange.toStringAsFixed(2)}%',
+        style: TextStyle(color: Colors.green),
+      );
+    } else {
+      return Text(
+        '${priceChange.toStringAsFixed(2)}%',
+        style: TextStyle(color: Colors.red),
+      );
+    }
+  }
+
   Widget _marketCapRow(int index, {bool header = false}) {
     final asset = _marketCapSeries!.data[index];
     final marketCap = _formatMarketCap(asset.marketCap);
+    final price = _formatPrice(asset.price);
+    final priceChange = _formatPriceChange(asset.priceChangePercent24h);
     return Column(
       children: [
         Row(
@@ -102,13 +129,12 @@ class _MarketCapPageState extends State<MarketCapPage> {
             ),
             const SizedBox(width: 8),
             ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 200, maxWidth: 200),
+              constraints: const BoxConstraints(minWidth: 150, maxWidth: 150),
               child:
                   header
                       ? Center(
                         child: Text(
                           'Name',
-                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       )
@@ -138,13 +164,64 @@ class _MarketCapPageState extends State<MarketCapPage> {
                       ? Center(
                         child: Text(
                           'Market Cap',
-                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       )
-                      : Text(marketCap),
+                      : Center(child: Text(marketCap)),
             ),
-            //TODO: Add more columns for other data (price, % change, sparkline)
+            const SizedBox(width: 8),
+            ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 100, maxWidth: 100),
+              child:
+                  header
+                      ? Center(
+                        child: Text(
+                          'Price',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      )
+                      : Center(child: Text(price)),
+            ),
+            const SizedBox(width: 8),
+            ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 100, maxWidth: 100),
+              child:
+                  header
+                      ? Center(
+                        child: Text(
+                          '24h',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      )
+                      : Center(child: priceChange),
+            ),
+            const SizedBox(width: 8),
+            ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 100, maxWidth: 100),
+              child:
+                  header
+                      ? Center(
+                        child: Text(
+                          'Price (1w)',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      )
+                      : Center(
+                        child:
+                            asset.sparkline == null
+                                ? const Text('No data')
+                                : SizedBox(
+                                  width: 100,
+                                  height: 25,
+                                  child: CustomPaint(
+                                    painter: SparkPainter(
+                                      asset.sparkline!,
+                                      timestamps: asset.sparklineTimestamps,
+                                    ),
+                                  ),
+                                ),
+                      ),
+            ),
             //TODO: reformat for smaller screens
           ],
         ),

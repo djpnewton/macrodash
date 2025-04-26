@@ -170,6 +170,11 @@ class AmountSeries extends Equatable {
 class MarketCapEntry extends Equatable {
   final double supply;
   final double price;
+  final List<num?>? sparkline;
+  final List<int>? sparklineTimestamps;
+  final double high24h;
+  final double low24h;
+  final double priceChangePercent24h;
   final double marketCap;
   final String ticker;
   final String name;
@@ -179,6 +184,11 @@ class MarketCapEntry extends Equatable {
   const MarketCapEntry({
     required this.supply,
     required this.price,
+    this.sparkline,
+    this.sparklineTimestamps,
+    required this.high24h,
+    required this.low24h,
+    required this.priceChangePercent24h,
     required this.marketCap,
     required this.ticker,
     required this.name,
@@ -197,6 +207,11 @@ class MarketCapEntry extends Equatable {
   List<Object?> get props => [
     supply,
     price,
+    sparkline,
+    sparklineTimestamps,
+    high24h,
+    low24h,
+    priceChangePercent24h,
     marketCap,
     ticker,
     name,

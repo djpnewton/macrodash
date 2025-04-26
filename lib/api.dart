@@ -187,4 +187,24 @@ class ServerApi {
       );
     }
   }
+
+  /// Fetches and parses the market cap data into a MarketCapSeries object.
+  Future<Result<MarketCapSeries>> fetchMarketCapSeries(MarketCap type) async {
+    const url = '$macrodashServerUrl/market/cap';
+    final queryParameters = {'type': type.name};
+    final result = await downloadFile(url, queryParameters);
+    switch (result) {
+      case Ok():
+        log.info('Market cap data downloaded successfully from $url');
+        final marketCapJson = jsonDecode(result.value);
+        if (marketCapJson == null) {
+          log.severe('Failed to parse market cap data from $url');
+          return Result.error(Exception('Failed to parse market cap data'));
+        }
+        return Result.ok(MarketCapSeries.fromJson(marketCapJson));
+      case Error():
+        log.severe('Failed to download market cap data from $url');
+        return Result.error(Exception(result.error));
+    }
+  }
 }

@@ -5,14 +5,27 @@ import 'package:macrodash_models/models.dart';
 import 'package:macrodash_server/abstract_downloader.dart';
 
 /// A class that handles downloading and parsing data from various sources.
-/// It provides methods to download and parse data related to M2 money supply,
-/// exchange rates, and sovereign debt.
+/// It provides methods to download and parse data related to stock indices,
+/// market capitalization
 class MarketData extends AbstractDownloader {
   /// Creates an instance of [MarketData]
   MarketData();
 
   /// Yahoo data source
   static const String yahooSource = 'https://finance.yahoo.com/';
+
+  /// CoinGecko data source
+  static const String coinGeckoSource = 'https://www.coingecko.com/';
+
+  static const int _goldOunces = 216_265 *
+      35274; // tons to ounces -  https://www.gold.org/goldhub/data/how-much-gold
+  static const int _silverOunces = 1_600_000 *
+      35274; // tons to ounces - https://cpmgroup.com/how-much-silver-is-above-ground/
+  static const int _platinumOunces = 10_000 *
+      35274; // tons to ounces - https://learn.apmex.com/answers/how-much-platinum-is-in-the-world/
+  static const int _palladiumOunces = 6_000 *
+      35274; // tons to ounces - https://online.kitco.com/fundamentals/palladium-investment
+
   final Logger _log = Logger('MarketData');
 
   /// Fetches and parses the Index data into a list of AmountEntry objects.
@@ -106,5 +119,236 @@ class MarketData extends AbstractDownloader {
       entries.add(AmountEntry(date: date, amount: closePrice));
     }
     return entries;
+  }
+
+  Future<double?> _tickerPrice(String ticker) async {
+    // Fetch the data from Yahoo Finance
+    final url = 'https://query2.finance.yahoo.com/v8/finance/chart/$ticker';
+    final data = await downloadFile(url, {'interval': '1m', 'range': '1d'});
+    if (data == null) {
+      _log.warning('Failed to download data for ticker: $ticker');
+      return null;
+    }
+    // Parse the data into a list of AmountEntry objects
+    final parsedData = jsonDecode(data) as Map<String, dynamic>;
+    // ignore: avoid_dynamic_calls
+    return parsedData['chart']['result'][0]['meta']['regularMarketPrice']
+        as double;
+  }
+
+  Future<List<MarketCapEntry>?> _marketCapMetals() async {
+    // get gold price from yahoo finance
+    final goldPrice = await _tickerPrice('GC=F');
+    if (goldPrice == null) {
+      _log.warning('Failed to download data for ticker: GC=F');
+      return null;
+    }
+    // get silver price from yahoo finance
+    final silverPrice = await _tickerPrice('SI=F');
+    if (silverPrice == null) {
+      _log.warning('Failed to download data for ticker: SI=F');
+      return null;
+    }
+    // get platinum price from yahoo finance
+    final platinumPrice = await _tickerPrice('PL=F');
+    if (platinumPrice == null) {
+      _log.warning('Failed to download data for ticker: PL=F');
+      return null;
+    }
+    // get palladium price from yahoo finance
+    final palladiumPrice = await _tickerPrice('PA=F');
+    if (palladiumPrice == null) {
+      _log.warning('Failed to download data for ticker: PA=F');
+      return null;
+    }
+    // calculate the market cap
+    final goldMarketCap = goldPrice * _goldOunces;
+    final silverMarketCap = silverPrice * _silverOunces;
+    final platinumMarketCap = platinumPrice * _platinumOunces;
+    final palladiumMarketCap = palladiumPrice * _palladiumOunces;
+    // create the market cap entries
+    final entries = <MarketCapEntry>[
+      MarketCapEntry(
+        supply: _goldOunces.toDouble(),
+        price: goldPrice,
+        marketCap: goldMarketCap,
+        ticker: 'GC=F',
+        name: 'Gold',
+        image: null,
+        type: MarketCap.metals,
+      ),
+      MarketCapEntry(
+        supply: _silverOunces.toDouble(),
+        price: silverPrice,
+        marketCap: silverMarketCap,
+        ticker: 'SI=F',
+        name: 'Silver',
+        image: null,
+        type: MarketCap.metals,
+      ),
+      MarketCapEntry(
+        supply: _platinumOunces.toDouble(),
+        price: platinumPrice,
+        marketCap: platinumMarketCap,
+        ticker: 'PL=F',
+        name: 'Platinum',
+        image: null,
+        type: MarketCap.metals,
+      ),
+      MarketCapEntry(
+        supply: _palladiumOunces.toDouble(),
+        price: palladiumPrice,
+        marketCap: palladiumMarketCap,
+        ticker: 'PA=F',
+        name: 'Palladium',
+        image: null,
+        type: MarketCap.metals,
+      ),
+    ];
+    return entries;
+  }
+
+  Future<List<MarketCapEntry>?> _marketCapCrypto() async {
+    // get crypto market cap from coin gecko
+    const url = 'https://api.coingecko.com/api/v3/coins/markets';
+    final data = await downloadFile(url, {'vs_currency': 'usd'});
+    if (data == null) {
+      _log.warning('Failed to download crypto data');
+      return null;
+    }
+    // Parse the data into a list of MarketCapEntry objects
+    final parsedData = jsonDecode(data) as List<dynamic>;
+    return parsedData
+        .map((e) => MarketCapEntry(
+              // ignore: avoid_dynamic_calls
+              supply: (e['circulating_supply'] as num).toDouble(),
+              // ignore: avoid_dynamic_calls
+              price: (e['current_price'] as num).toDouble(),
+              // ignore: avoid_dynamic_calls
+              marketCap: (e['market_cap'] as num).toDouble(),
+              // ignore: avoid_dynamic_calls
+              ticker: e['symbol'] as String,
+              // ignore: avoid_dynamic_calls
+              name: e['name'] as String,
+              // ignore: avoid_dynamic_calls
+              image: e['image'] as String,
+              type: MarketCap.crypto,
+            ))
+        .toList();
+  }
+
+  Future<List<MarketCapEntry>?> _marketCapStocks() async {
+    return null;
+  }
+
+  Future<List<MarketCapEntry>?> _marketCapCurrency() async {
+    return null;
+  }
+
+  /// Fetches and parses the market capitalization data into a list of
+  /// MarketCapEntry objects.
+  Future<MarketCapSeries?> marketCapData(MarketCap type) async {
+    List<MarketCapEntry>? metalsData = [];
+    List<MarketCapEntry>? cryptoData = [];
+    List<MarketCapEntry>? stocksData = [];
+    List<MarketCapEntry>? currencyData = [];
+    var description = '';
+    var sources = <String>[];
+
+    switch (type) {
+      case MarketCap.all:
+        // Fetch and parse data for all market caps
+        var data = await _marketCapMetals();
+        if (data != null) {
+          metalsData = data;
+        } else {
+          _log.warning('Failed to download data for metals');
+          return null;
+        }
+        data = await _marketCapCrypto();
+        if (data != null) {
+          cryptoData = data;
+        } else {
+          _log.warning('Failed to download data for crypto');
+          return null;
+        }
+        data = await _marketCapStocks();
+        if (data != null) {
+          stocksData = data;
+        } else {
+          _log.warning('Failed to download data for stocks');
+          return null;
+        }
+        data = await _marketCapCurrency();
+        if (data != null) {
+          currencyData = data;
+        } else {
+          _log.warning('Failed to download data for currency');
+          return null;
+        }
+        description = 'All Market Caps';
+        sources = [
+          MarketData.yahooSource,
+          MarketData.coinGeckoSource,
+        ];
+      case MarketCap.metals:
+        // Fetch and parse data for metals
+        final data = await _marketCapMetals();
+        if (data != null) {
+          metalsData = data;
+        } else {
+          _log.warning('Failed to download data for metals');
+          return null;
+        }
+        description = 'Metals';
+        sources = [MarketData.yahooSource];
+      case MarketCap.crypto:
+        // Fetch and parse data for crypto
+        final data = await _marketCapCrypto();
+        if (data != null) {
+          cryptoData = data;
+        } else {
+          _log.warning('Failed to download data for crypto');
+          return null;
+        }
+        description = 'Crypto';
+        sources = [MarketData.coinGeckoSource];
+      case MarketCap.stocks:
+        // Fetch and parse data for stocks
+        final data = await _marketCapStocks();
+        if (data != null) {
+          stocksData = data;
+        } else {
+          _log.warning('Failed to download data for stocks');
+          return null;
+        }
+        description = 'Stocks';
+        sources = ['TODO'];
+      case MarketCap.currencies:
+        // Fetch and parse data for currencies
+        final data = await _marketCapCurrency();
+        if (data != null) {
+          currencyData = data;
+        } else {
+          _log.warning('Failed to download data for currency');
+          return null;
+        }
+        description = 'Currencies';
+        sources = ['TODO'];
+    }
+    // Combine all data into a single list
+    // and sort the data by market cap in descending order
+    final allData = <MarketCapEntry>[
+      ...metalsData,
+      ...cryptoData,
+      ...stocksData,
+      ...currencyData,
+    ]..sort((a, b) => b.marketCap.compareTo(a.marketCap));
+    // Create the market cap series
+    return MarketCapSeries(
+      description: description,
+      sources: sources,
+      data: allData,
+    );
   }
 }

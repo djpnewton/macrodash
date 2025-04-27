@@ -47,6 +47,9 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
 
+    env:
+      SERVER_URL: https://macrodash-server.fly.dev
+
     steps:
       - uses: actions/checkout@v4
       - name: Insert git sha

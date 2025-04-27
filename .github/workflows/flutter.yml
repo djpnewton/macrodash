@@ -49,6 +49,18 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - name: Insert git sha
+        run: |
+          sed -i -e "s|GIT_SHA_REPLACE|$GITHUB_SHA|g" lib/config.dart
+      - name: Insert build date
+        run: |
+          sed -i -e "s|BUILD_DATE_REPLACE|$(date)|g" lib/config.dart
+      - name: Insert server url
+        run: |
+          sed -i -e "s|http://localhost:8080|${{ env.SERVER_URL }}|g" lib/config.dart
+      - name: Insert client cache busting
+        run: |
+          sed -i -e "s|CLIENT_VERSION_REPLACE|$(date +%s)|g" web/index.html
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.29.x'

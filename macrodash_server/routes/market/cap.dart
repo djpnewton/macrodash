@@ -31,7 +31,9 @@ Future<Response> onRequest(RequestContext context) async {
     );
   }
 
-  final result = await dataDownloader.marketCapData(type);
+  final serverUrl =
+      '${context.request.uri.scheme}://${context.request.uri.authority}';
+  final result = await dataDownloader.marketCapData(type, serverUrl);
   if (result == null) {
     return Response(statusCode: 500, body: 'Failed to fetch market cap data.');
   }

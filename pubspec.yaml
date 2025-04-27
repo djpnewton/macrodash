@@ -46,6 +46,7 @@ dependencies:
   financial_chart: ^0.2.0
   shared_preferences: ^2.5.3
   url_launcher: ^6.3.1
+  flutter_svg: ^2.1.0
 
 dev_dependencies:
   flutter_test:

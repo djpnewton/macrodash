@@ -122,7 +122,12 @@ class MarketData extends AbstractDownloader {
   }
 
   Future<MarketCapEntry?> _tickerMarketCap(
-      String ticker, double supply, String name, MarketCap type) async {
+    String ticker,
+    double supply,
+    String name,
+    MarketCap type,
+    String serverUrl,
+  ) async {
     // Fetch the data from Yahoo Finance
     final url = 'https://query2.finance.yahoo.com/v8/finance/chart/$ticker';
     final data = await downloadFile(url, {'interval': '1h', 'range': '5d'});
@@ -171,18 +176,19 @@ class MarketData extends AbstractDownloader {
       marketCap: marketCap,
       ticker: ticker,
       name: name,
-      image: null,
+      image: '$serverUrl/images/logo/${name.toLowerCase()}.svg',
       type: type,
     );
   }
 
-  Future<List<MarketCapEntry>?> _marketCapMetals() async {
+  Future<List<MarketCapEntry>?> _marketCapMetals(String serverUrl) async {
     // get gold market cap from yahoo finance
     final goldMarketCap = await _tickerMarketCap(
       'GC=F',
       _goldOunces.toDouble(),
       'Gold',
       MarketCap.metals,
+      serverUrl,
     );
     if (goldMarketCap == null) {
       _log.warning('Failed to download data for ticker: GC=F');
@@ -194,6 +200,7 @@ class MarketData extends AbstractDownloader {
       _silverOunces.toDouble(),
       'Silver',
       MarketCap.metals,
+      serverUrl,
     );
     if (silverMarketCap == null) {
       _log.warning('Failed to download data for ticker: SI=F');
@@ -205,6 +212,7 @@ class MarketData extends AbstractDownloader {
       _platinumOunces.toDouble(),
       'Platinum',
       MarketCap.metals,
+      serverUrl,
     );
     if (platinumMarketCap == null) {
       _log.warning('Failed to download data for ticker: PL=F');
@@ -216,6 +224,7 @@ class MarketData extends AbstractDownloader {
       _palladiumOunces.toDouble(),
       'Palladium',
       MarketCap.metals,
+      serverUrl,
     );
     if (palladiumMarketCap == null) {
       _log.warning('Failed to download data for ticker: PA=F');
@@ -287,7 +296,8 @@ class MarketData extends AbstractDownloader {
 
   /// Fetches and parses the market capitalization data into a list of
   /// MarketCapEntry objects.
-  Future<MarketCapSeries?> marketCapData(MarketCap type) async {
+  Future<MarketCapSeries?> marketCapData(
+      MarketCap type, String serverUrl) async {
     List<MarketCapEntry>? metalsData = [];
     List<MarketCapEntry>? cryptoData = [];
     List<MarketCapEntry>? stocksData = [];
@@ -298,7 +308,7 @@ class MarketData extends AbstractDownloader {
     switch (type) {
       case MarketCap.all:
         // Fetch and parse data for all market caps
-        var data = await _marketCapMetals();
+        var data = await _marketCapMetals(serverUrl);
         if (data != null) {
           metalsData = data;
         } else {
@@ -333,7 +343,7 @@ class MarketData extends AbstractDownloader {
         ];
       case MarketCap.metals:
         // Fetch and parse data for metals
-        final data = await _marketCapMetals();
+        final data = await _marketCapMetals(serverUrl);
         if (data != null) {
           metalsData = data;
         } else {

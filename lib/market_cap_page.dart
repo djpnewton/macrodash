@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:macrodash_models/models.dart';
 
@@ -141,11 +142,17 @@ class _MarketCapPageState extends State<MarketCapPage> {
                       : Row(
                         children: [
                           (asset.image != null)
-                              ? Image.network(
-                                asset.image!,
-                                width: 24,
-                                height: 24,
-                              )
+                              ? asset.image!.endsWith('.svg')
+                                  ? SvgPicture.network(
+                                    asset.image!,
+                                    width: 24,
+                                    height: 24,
+                                  )
+                                  : Image.network(
+                                    asset.image!,
+                                    width: 24,
+                                    height: 24,
+                                  )
                               : Image.asset(
                                 'assets/coin.png',
                                 width: 24,

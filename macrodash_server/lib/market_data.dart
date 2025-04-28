@@ -122,6 +122,38 @@ class MarketData extends AbstractDownloader {
     return entries;
   }
 
+  YahooSparklineData _parseSparklineData(
+    Map<String, dynamic> parsedData,
+  ) {
+    // ignore: avoid_dynamic_calls
+    final sparkline = (parsedData['chart']['result'][0]['indicators']['quote']
+            [0]['close'] as List<dynamic>)
+        .map((e) => e as num?)
+        .toList();
+    final sparklineTimestamps =
+        // ignore: avoid_dynamic_calls
+        (parsedData['chart']['result'][0]['timestamp'] as List<dynamic>)
+            .map((e) => e as int)
+            .toList();
+    return YahooSparklineData(
+      sparkline: sparkline,
+      sparklineTimestamps: sparklineTimestamps,
+    );
+  }
+
+  Future<YahooSparklineData?> _yahooSparkline(String ticker) async {
+    // Fetch the data from Yahoo Finance
+    final url = 'https://query2.finance.yahoo.com/v8/finance/chart/$ticker';
+    final data = await downloadFile(url, {'interval': '1h', 'range': '5d'});
+    if (data == null) {
+      _log.warning('Failed to download data for ticker: $ticker');
+      return null;
+    }
+    // Parse the data into a list of AmountEntry objects
+    final parsedData = jsonDecode(data) as Map<String, dynamic>;
+    return _parseSparklineData(parsedData);
+  }
+
   Future<MarketCapEntry?> _tickerMarketCap(
     String ticker,
     double supply,
@@ -141,16 +173,9 @@ class MarketData extends AbstractDownloader {
     // ignore: avoid_dynamic_calls
     final price = parsedData['chart']['result'][0]['meta']['regularMarketPrice']
         as double;
-    // ignore: avoid_dynamic_calls
-    final sparkline = (parsedData['chart']['result'][0]['indicators']['quote']
-            [0]['close'] as List<dynamic>)
-        .map((e) => e as num?)
-        .toList();
-    final sparklineTimestamps =
-        // ignore: avoid_dynamic_calls
-        (parsedData['chart']['result'][0]['timestamp'] as List<dynamic>)
-            .map((e) => e as int)
-            .toList();
+    final sparklineData = _parseSparklineData(parsedData);
+    final sparkline = sparklineData.sparkline;
+    final sparklineTimestamps = sparklineData.sparklineTimestamps;
     double priceChangePercent24h = 0;
     if (sparkline.length > 24 && sparkline[sparkline.length - 1 - 24] != null) {
       final price24hoursAgo = sparkline[sparkline.length - 1 - 24]!.toDouble();
@@ -290,7 +315,6 @@ class MarketData extends AbstractDownloader {
   }
 
   double _parseTVAmount(String amountStr) {
-    _log.info('Parsing amount: $amountStr');
     // Parse the market cap string into a double
     if (amountStr.endsWith('T')) {
       return double.parse(amountStr.substring(0, amountStr.length - 1)) *
@@ -320,8 +344,117 @@ class MarketData extends AbstractDownloader {
     if (p.endsWith('%')) {
       p = p.substring(0, p.length - 1);
     }
-    _log.info('Parsing price change: $p, sign: $sign');
     return double.parse(p) * sign;
+  }
+
+  String? _yahooTicker(String ticker) {
+    const largestCompanyYahooTickers = {
+      'AAPL': 'AAPL',
+      'MSFT': 'MSFT',
+      'NVDA': 'NVDA',
+      'AMZN': 'AMZN',
+      'GOOG': 'GOOG',
+      '2222': '2222.SR',
+      'META': 'META',
+      'BRK.A': 'BRK-A',
+      'TSLA': 'TSLA',
+      'AVGO': 'AVGO',
+      'LLY': 'LLY',
+      'WMT': 'WMT',
+      '2330': '2330.TW',
+      'JPM': 'JPM',
+      'V': 'V',
+      '700': '0700.HK',
+      'MA': 'MA',
+      'NFLX': 'NFLX',
+      'XOM': 'XOM',
+      'COST': 'COST',
+      'ORCL': 'ORCL',
+      'UNH': 'UNH',
+      'PG': 'PG',
+      'JNJ': 'JNJ',
+      'HD': 'HD',
+      'ABBV': 'ABBV',
+      '601398': '601398.SS',
+      'SAP': 'SAP',
+      'KO': 'KO',
+      'BAC': 'BAC',
+      'BABA': 'BABA',
+      'MC': 'MC.PA',
+      'RMS': 'RMS.PA',
+      'NOVO_B': 'NOVO-B.CO',
+      'PLTR': 'PLTR',
+      'TMUS': 'TMUS',
+      '600519': '600519.SS',
+      'PM': 'PM',
+      '601288': '601288.SS',
+      'NESN': 'NESN.SW',
+      'ASML': 'ASML',
+      'RO': 'ROG.SW',
+      'CRM': 'CRM',
+      '005930': '005930.KS',
+      '7203': '7203.T',
+      'CVX': 'CVX',
+      'IHC': 'IHC.AE',
+      '600941': '600941.SS',
+      'MCD': 'MCD',
+      'WFC': 'WFC',
+      'CSCO': 'CSCO',
+      'OR': 'OR.PA',
+      'ABT': 'ABT',
+      '601939': '601939.SS',
+      'IBM': 'IBM',
+      'AZN': 'AZN',
+      'GE': 'GE',
+      'NOVN': 'NOVN.SW',
+      'LIN': 'LIN',
+      '601988': '601988.SS',
+      'MRK': 'MRK',
+      'RELIANCE': 'RELIANCE.NS',
+      'HSBA': 'HSBA.L',
+      'T': 'T',
+      'SHEL': 'SHEL',
+      'NOW': 'NOW',
+      '601857': '601857.SS',
+      'MS': 'MS',
+      'AXP': 'AXP',
+      'ISRG': 'ISRG',
+      'SIE': 'SIE.DE',
+      'ACN': 'ACN',
+      'PEP': 'PEP',
+      'VZ': 'VZ',
+      'DTE': 'DTE.DE',
+      'CBA': 'CBA.AX',
+      'INTU': 'INTU',
+      'ITX': 'ITX.MC',
+      'HDFCBANK': 'HDFCBANK.NS',
+      'GS': 'GS',
+      'RTX': 'RTX',
+      'RY': 'RY',
+      'UBER': 'UBER',
+      'QCOM': 'QCOM',
+      'DIS': 'DIS',
+      'BX': 'BX',
+      'BKNG': 'BKNG',
+      'TMO': 'TMO',
+      'PGR': 'PGR',
+      'ADBE': 'ADBE',
+      'ALV': 'ALV.DE',
+      'AMD': 'AMD',
+      'ULVR': 'ULVR.L',
+      '002594': '002594.SZ',
+      '1810': '1810.HK',
+      'AMGN': 'AMGN',
+      'BSX': 'BSX',
+      'SPGI': 'SPGI',
+      '6758': '6758.T',
+      'SCHW': 'SCHW',
+    };
+    if (!largestCompanyYahooTickers.keys.contains(ticker)) {
+      _log.warning('Ticker $ticker is not in the list of largest companies');
+      return null;
+    }
+    return largestCompanyYahooTickers[ticker];
   }
 
   Future<List<MarketCapEntry>?> _marketCapStocks() async {
@@ -384,8 +517,6 @@ class MarketData extends AbstractDownloader {
         MarketCapEntry(
           supply: 0,
           price: price,
-          sparkline: null,
-          sparklineTimestamps: null,
           high24h: 0,
           low24h: 0,
           priceChangePercent24h: priceChange,
@@ -474,6 +605,8 @@ class MarketData extends AbstractDownloader {
         }
         description = 'Stocks';
         sources = ['TODO'];
+        final tickers = data.map((e) => e.ticker).toSet();
+        _log.info('Tickers: $tickers');
     }
     // Combine all data into a single list
     // and sort the data by market cap in descending order
@@ -488,5 +621,16 @@ class MarketData extends AbstractDownloader {
       sources: sources,
       data: allData,
     );
+  }
+
+  /// Fetches and parses the sparkline data for a given ticker symbol.
+  Future<YahooSparklineData?> sparkline(String ticker) async {
+    // Fetch the data from Yahoo Finance
+    final data = await _yahooSparkline(_yahooTicker(ticker) ?? ticker);
+    if (data == null) {
+      _log.warning('Failed to download data for ticker: $ticker');
+      return null;
+    }
+    return data;
   }
 }

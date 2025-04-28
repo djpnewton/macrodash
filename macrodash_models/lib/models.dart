@@ -249,3 +249,28 @@ class MarketCapSeries extends Equatable {
   String toString() =>
       'MarketCapSeries(description: $description, sources: $sources, data: $data)';
 }
+
+@JsonSerializable()
+class YahooSparklineData extends Equatable {
+  final List<num?> sparkline;
+  final List<int> sparklineTimestamps;
+
+  YahooSparklineData({
+    required this.sparkline,
+    required this.sparklineTimestamps,
+  });
+
+  /// Creates an instance of [YahooSparklineData] from a JSON map.
+  factory YahooSparklineData.fromJson(Map<String, dynamic> json) =>
+      _$YahooSparklineDataFromJson(json);
+
+  /// Converts the instance of [YahooSparklineData] to a JSON map.
+  Map<String, dynamic> toJson() => _$YahooSparklineDataToJson(this);
+
+  @override
+  List<Object?> get props => [sparkline, sparklineTimestamps];
+
+  @override
+  String toString() =>
+      'YahooSparklineData(sparkline: $sparkline, sparklineTimestamps: $sparklineTimestamps)';
+}

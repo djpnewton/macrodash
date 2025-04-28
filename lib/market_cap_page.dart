@@ -12,6 +12,8 @@ import 'sparkline.dart';
 
 final Logger log = Logger('market_cap_page');
 
+enum SparklineStatus { loading, error, success }
+
 class MarketCapPage extends StatefulWidget {
   const MarketCapPage({super.key, required this.title});
 
@@ -27,6 +29,8 @@ class _MarketCapPageState extends State<MarketCapPage> {
   MarketCapSeries? _marketCapSeries;
   bool _isLoading = true;
   late MarketCap _selectedMarket;
+  Map<String, SparklineStatus> _sparklineStatus = {};
+  Map<String, YahooSparklineData> _sparklineData = {};
 
   @override
   void initState() {
@@ -102,6 +106,59 @@ class _MarketCapPageState extends State<MarketCapPage> {
       return Text(
         '${priceChange.toStringAsFixed(2)}%',
         style: TextStyle(color: Colors.red),
+      );
+    }
+  }
+
+  Widget _sparkline(
+    String ticker,
+    List<num?>? sparkline,
+    List<int>? timestamps,
+  ) {
+    if (sparkline == null) {
+      if (_sparklineStatus.keys.contains(ticker)) {
+        switch (_sparklineStatus[ticker]!) {
+          case SparklineStatus.loading:
+            return const CircularProgressIndicator();
+          case SparklineStatus.error:
+            return const Text('No data');
+          case SparklineStatus.success:
+            return SizedBox(
+              width: 100,
+              height: 25,
+              child: CustomPaint(
+                painter: SparkPainter(
+                  _sparklineData[ticker]!.sparkline,
+                  timestamps: _sparklineData[ticker]!.sparklineTimestamps,
+                ),
+              ),
+            );
+        }
+      }
+      // make a request to get the sparkline
+      _sparklineStatus[ticker] = SparklineStatus.loading;
+      _api.fetchYahooSparkline(ticker).then((result) {
+        switch (result) {
+          case Ok():
+            _sparklineStatus[ticker] = SparklineStatus.success;
+            _sparklineData[ticker] = result.value;
+          case Error():
+            _sparklineStatus[ticker] = SparklineStatus.error;
+        }
+        setState(() {
+          _sparklineStatus = _sparklineStatus;
+          _sparklineData = _sparklineData;
+        });
+      });
+      return const CircularProgressIndicator();
+    } else {
+      // If the sparkline is already available, use it
+      return SizedBox(
+        width: 100,
+        height: 25,
+        child: CustomPaint(
+          painter: SparkPainter(sparkline, timestamps: timestamps),
+        ),
       );
     }
   }
@@ -214,19 +271,11 @@ class _MarketCapPageState extends State<MarketCapPage> {
                         ),
                       )
                       : Center(
-                        child:
-                            asset.sparkline == null
-                                ? const Text('No data')
-                                : SizedBox(
-                                  width: 100,
-                                  height: 25,
-                                  child: CustomPaint(
-                                    painter: SparkPainter(
-                                      asset.sparkline!,
-                                      timestamps: asset.sparklineTimestamps,
-                                    ),
-                                  ),
-                                ),
+                        child: _sparkline(
+                          asset.ticker,
+                          asset.sparkline,
+                          asset.sparklineTimestamps,
+                        ),
                       ),
             ),
             //TODO: reformat for smaller screens

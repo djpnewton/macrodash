@@ -104,3 +104,19 @@ Map<String, dynamic> _$MarketCapSeriesToJson(MarketCapSeries instance) =>
       'sources': instance.sources,
       'data': instance.data,
     };
+
+YahooSparklineData _$YahooSparklineDataFromJson(Map<String, dynamic> json) =>
+    YahooSparklineData(
+      sparkline:
+          (json['sparkline'] as List<dynamic>).map((e) => e as num?).toList(),
+      sparklineTimestamps:
+          (json['sparklineTimestamps'] as List<dynamic>)
+              .map((e) => (e as num).toInt())
+              .toList(),
+    );
+
+Map<String, dynamic> _$YahooSparklineDataToJson(YahooSparklineData instance) =>
+    <String, dynamic>{
+      'sparkline': instance.sparkline,
+      'sparklineTimestamps': instance.sparklineTimestamps,
+    };

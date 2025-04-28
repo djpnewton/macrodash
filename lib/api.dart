@@ -207,4 +207,26 @@ class ServerApi {
         return Result.error(Exception(result.error));
     }
   }
+
+  /// Fetches and parses a sparkline into a YahooSparklineData object.
+  Future<Result<YahooSparklineData>> fetchYahooSparkline(String ticker) async {
+    const url = '$macrodashServerUrl/market/sparkline';
+    final queryParameters = {'ticker': ticker};
+    final result = await downloadFile(url, queryParameters);
+    switch (result) {
+      case Ok():
+        log.info('Yahoo sparkline data downloaded successfully from $url');
+        final sparklineJson = jsonDecode(result.value);
+        if (sparklineJson == null) {
+          log.severe('Failed to parse Yahoo sparkline data from $url');
+          return Result.error(
+            Exception('Failed to parse Yahoo sparkline data'),
+          );
+        }
+        return Result.ok(YahooSparklineData.fromJson(sparklineJson));
+      case Error():
+        log.severe('Failed to download Yahoo sparkline data from $url');
+        return Result.error(Exception(result.error));
+    }
+  }
 }

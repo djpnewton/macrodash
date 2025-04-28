@@ -106,13 +106,12 @@ final marketIndexAsiaLabels = {
   MarketIndexAsia.nifty50: 'Nifty 50',
 };
 
-enum MarketCap { metals, crypto, stocks, currencies, all }
+enum MarketCap { metals, crypto, stocks, all }
 
 final marketCapLabels = {
   MarketCap.metals: 'Metals',
   MarketCap.crypto: 'Crypto',
   MarketCap.stocks: 'Stocks',
-  MarketCap.currencies: 'Currencies',
   MarketCap.all: 'All',
 };
 

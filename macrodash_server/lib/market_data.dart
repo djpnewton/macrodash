@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:html/parser.dart';
 import 'package:logging/logging.dart';
 import 'package:macrodash_models/models.dart';
 import 'package:macrodash_server/abstract_downloader.dart';
@@ -248,7 +249,7 @@ class MarketData extends AbstractDownloader {
       'per_page': '150',
       'page': '1',
       'sparkline': 'true',
-      'price_change_percentage': '1h,24h,7d'
+      'price_change_percentage': '1h,24h,7d',
     });
     if (data == null) {
       _log.warning('Failed to download crypto data');
@@ -257,51 +258,157 @@ class MarketData extends AbstractDownloader {
     // Parse the data into a list of MarketCapEntry objects
     final parsedData = jsonDecode(data) as List<dynamic>;
     return parsedData
-        .map((e) => MarketCapEntry(
-              // ignore: avoid_dynamic_calls
-              supply: (e['circulating_supply'] as num).toDouble(),
-              // ignore: avoid_dynamic_calls
-              price: (e['current_price'] as num).toDouble(),
-              // ignore: avoid_dynamic_calls
-              sparkline: (e['sparkline_in_7d']['price'] as List<dynamic>)
-                  .map((e) => e as double)
-                  .toList(),
-              // ignore: avoid_dynamic_calls
-              high24h: (e['high_24h'] as num).toDouble(),
-              // ignore: avoid_dynamic_calls
-              low24h: (e['low_24h'] as num).toDouble(),
-              priceChangePercent24h:
-                  // ignore: avoid_dynamic_calls
-                  (e['price_change_percentage_24h'] as num).toDouble(),
-              // ignore: avoid_dynamic_calls
-              marketCap: (e['market_cap'] as num).toDouble(),
-              // ignore: avoid_dynamic_calls
-              ticker: e['symbol'] as String,
-              // ignore: avoid_dynamic_calls
-              name: e['name'] as String,
-              // ignore: avoid_dynamic_calls
-              image: e['image'] as String,
-              type: MarketCap.crypto,
-            ))
+        .map(
+          (e) => MarketCapEntry(
+            // ignore: avoid_dynamic_calls
+            supply: (e['circulating_supply'] as num).toDouble(),
+            // ignore: avoid_dynamic_calls
+            price: (e['current_price'] as num).toDouble(),
+            // ignore: avoid_dynamic_calls
+            sparkline: (e['sparkline_in_7d']['price'] as List<dynamic>)
+                .map((e) => e as double)
+                .toList(),
+            // ignore: avoid_dynamic_calls
+            high24h: (e['high_24h'] as num).toDouble(),
+            // ignore: avoid_dynamic_calls
+            low24h: (e['low_24h'] as num).toDouble(),
+            priceChangePercent24h:
+                // ignore: avoid_dynamic_calls
+                (e['price_change_percentage_24h'] as num).toDouble(),
+            // ignore: avoid_dynamic_calls
+            marketCap: (e['market_cap'] as num).toDouble(),
+            // ignore: avoid_dynamic_calls
+            ticker: e['symbol'] as String,
+            // ignore: avoid_dynamic_calls
+            name: e['name'] as String,
+            // ignore: avoid_dynamic_calls
+            image: e['image'] as String,
+            type: MarketCap.crypto,
+          ),
+        )
         .toList();
   }
 
-  Future<List<MarketCapEntry>?> _marketCapStocks() async {
-    return null;
+  double _parseTVAmount(String amountStr) {
+    _log.info('Parsing amount: $amountStr');
+    // Parse the market cap string into a double
+    if (amountStr.endsWith('T')) {
+      return double.parse(amountStr.substring(0, amountStr.length - 1)) *
+          1_000_000_000_000;
+    } else if (amountStr.endsWith('B')) {
+      return double.parse(amountStr.substring(0, amountStr.length - 1)) *
+          1_000_000_000;
+    } else if (amountStr.endsWith('M')) {
+      return double.parse(amountStr.substring(0, amountStr.length - 1)) *
+          1_000_000;
+    } else {
+      return double.parse(amountStr.replaceAll(',', ''));
+    }
   }
 
-  Future<List<MarketCapEntry>?> _marketCapCurrency() async {
-    return null;
+  double _parseTVPriceChange(String priceChangeStr) {
+    // Parse the price change string into a double
+    var sign = 1;
+    var p = priceChangeStr;
+    if (p.startsWith('+')) {
+      p = p.substring(1);
+    }
+    if (p.startsWith('-') || p.startsWith('−')) {
+      sign = -1;
+      p = p.substring(1);
+    }
+    if (p.endsWith('%')) {
+      p = p.substring(0, p.length - 1);
+    }
+    _log.info('Parsing price change: $p, sign: $sign');
+    return double.parse(p) * sign;
+  }
+
+  Future<List<MarketCapEntry>?> _marketCapStocks() async {
+    const url =
+        'https://www.tradingview.com/markets/world-stocks/worlds-largest-companies/';
+    final data = await downloadFile(url, {});
+    if (data == null) {
+      _log.warning('Failed to download stocks data');
+      return null;
+    }
+    // Parse the data into a list of MarketCapEntry objects
+    final document = parse(data);
+    final entries = <MarketCapEntry>[];
+    // Find the table with the class 'table-Ngq2xrcG'
+    final table = document.querySelector('.table-Ngq2xrcG');
+    if (table == null) {
+      _log.warning('Failed to find stocks table');
+      return null;
+    }
+    // Find all the rows in the table
+    final rows = table.querySelectorAll('tr');
+    for (final row in rows) {
+      // Find all the cells in the row
+      final cells = row.querySelectorAll('td');
+      if (cells.length < 5) {
+        continue; // Skip rows with less than 5 cells
+      }
+      // Get the ticker symbol from the first cell
+      final tickerCell = cells[0].children[0];
+      if (!tickerCell.className.startsWith('tickerCell')) {
+        continue; // Skip rows without a ticker cell
+      }
+      if (tickerCell.children.length < 3) {
+        continue; // Skip rows without sufficient ticker cell children
+      }
+      final img = tickerCell.children[1];
+      if (!img.className.startsWith('logo')) {
+        continue; // Skip rows without an image
+      }
+      final image = img.attributes['src'];
+      final link = tickerCell.children[2];
+      final ticker = link.text.trim();
+      final sup = tickerCell.children[3];
+      final name = sup.text.trim();
+      // get the market cap from the third cell
+      final marketCapCell = cells[2];
+      marketCapCell.children[0].remove();
+      final marketCapStr = marketCapCell.text.trim();
+      final marketCap = _parseTVAmount(marketCapStr);
+      // get price from the fourth cell
+      final priceCell = cells[3];
+      priceCell.children[0].remove();
+      final priceStr = priceCell.text.trim();
+      final price = _parseTVAmount(priceStr);
+      // get the price change percent from the fifth cell
+      final priceChangeStr = cells[4].text.trim();
+      final priceChange = _parseTVPriceChange(priceChangeStr);
+      // create the market cap entry
+      entries.add(
+        MarketCapEntry(
+          supply: 0,
+          price: price,
+          sparkline: null,
+          sparklineTimestamps: null,
+          high24h: 0,
+          low24h: 0,
+          priceChangePercent24h: priceChange,
+          marketCap: marketCap,
+          ticker: ticker,
+          name: name,
+          image: image,
+          type: MarketCap.stocks,
+        ),
+      );
+    }
+    return entries;
   }
 
   /// Fetches and parses the market capitalization data into a list of
   /// MarketCapEntry objects.
   Future<MarketCapSeries?> marketCapData(
-      MarketCap type, String serverUrl) async {
+    MarketCap type,
+    String serverUrl,
+  ) async {
     List<MarketCapEntry>? metalsData = [];
     List<MarketCapEntry>? cryptoData = [];
     List<MarketCapEntry>? stocksData = [];
-    List<MarketCapEntry>? currencyData = [];
     var description = '';
     var sources = <String>[];
 
@@ -327,13 +434,6 @@ class MarketData extends AbstractDownloader {
           stocksData = data;
         } else {
           _log.warning('Failed to download data for stocks');
-          return null;
-        }
-        data = await _marketCapCurrency();
-        if (data != null) {
-          currencyData = data;
-        } else {
-          _log.warning('Failed to download data for currency');
           return null;
         }
         description = 'All Market Caps';
@@ -374,17 +474,6 @@ class MarketData extends AbstractDownloader {
         }
         description = 'Stocks';
         sources = ['TODO'];
-      case MarketCap.currencies:
-        // Fetch and parse data for currencies
-        final data = await _marketCapCurrency();
-        if (data != null) {
-          currencyData = data;
-        } else {
-          _log.warning('Failed to download data for currency');
-          return null;
-        }
-        description = 'Currencies';
-        sources = ['TODO'];
     }
     // Combine all data into a single list
     // and sort the data by market cap in descending order
@@ -392,7 +481,6 @@ class MarketData extends AbstractDownloader {
       ...metalsData,
       ...cryptoData,
       ...stocksData,
-      ...currencyData,
     ]..sort((a, b) => b.marketCap.compareTo(a.marketCap));
     // Create the market cap series
     return MarketCapSeries(

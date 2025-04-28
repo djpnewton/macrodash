@@ -84,7 +84,6 @@ const _$MarketCapEnumMap = {
   MarketCap.metals: 'metals',
   MarketCap.crypto: 'crypto',
   MarketCap.stocks: 'stocks',
-  MarketCap.currencies: 'currencies',
   MarketCap.all: 'all',
 };
 

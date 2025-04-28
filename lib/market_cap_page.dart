@@ -130,7 +130,7 @@ class _MarketCapPageState extends State<MarketCapPage> {
             ),
             const SizedBox(width: 8),
             ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 150, maxWidth: 150),
+              constraints: const BoxConstraints(minWidth: 200, maxWidth: 200),
               child:
                   header
                       ? Center(

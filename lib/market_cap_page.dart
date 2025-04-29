@@ -269,25 +269,39 @@ class _MarketCapPageState extends State<MarketCapPage> {
                     header
                         ? Center(
                           child: Text(
-                            'Price',
+                            verySmallWidth ? 'Price / 24h' : 'Price',
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                         )
-                        : Center(child: Text(price)),
-              ),
-              SizedBox(width: dividerSize),
-              ConstrainedBox(
-                constraints: const BoxConstraints(minWidth: 45, maxWidth: 45),
-                child:
-                    header
-                        ? Center(
-                          child: Text(
-                            '24h',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                        : Center(
+                          child: Column(
+                            children: [
+                              Text(price),
+                              verySmallWidth ? priceChange : const SizedBox(),
+                            ],
                           ),
-                        )
-                        : Center(child: priceChange),
+                        ),
               ),
+              verySmallWidth ? const SizedBox() : SizedBox(width: dividerSize),
+              verySmallWidth
+                  ? const SizedBox()
+                  : ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      minWidth: 45,
+                      maxWidth: 45,
+                    ),
+                    child:
+                        header
+                            ? Center(
+                              child: Text(
+                                '24h',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            )
+                            : Center(child: priceChange),
+                  ),
               SizedBox(width: dividerSize),
               ConstrainedBox(
                 constraints: BoxConstraints(

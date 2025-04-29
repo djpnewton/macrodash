@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:macrodash_models/models.dart';
 
@@ -9,6 +8,7 @@ import 'api.dart';
 import 'option_buttons.dart';
 import 'result.dart';
 import 'sparkline.dart';
+import 'picture_helper.dart';
 
 final Logger log = Logger('market_cap_page');
 
@@ -175,8 +175,8 @@ class _MarketCapPageState extends State<MarketCapPage> {
     final image =
         (asset.image != null)
             ? asset.image!.endsWith('.svg')
-                ? SvgPicture.network(
-                  asset.image!,
+                ? SvgPictureNetwork(
+                  url: asset.image!,
                   width: imgSize,
                   height: imgSize,
                 )

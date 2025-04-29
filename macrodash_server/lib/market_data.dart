@@ -202,7 +202,7 @@ class MarketData extends AbstractDownloader {
       marketCap: marketCap,
       ticker: ticker,
       name: name,
-      image: '$serverUrl/images/logo/${name.toLowerCase()}.svg',
+      image: '$serverUrl/images/logos_${type.name}/${name.toLowerCase()}.svg',
       type: type,
     );
   }
@@ -344,7 +344,12 @@ class MarketData extends AbstractDownloader {
     if (p.endsWith('%')) {
       p = p.substring(0, p.length - 1);
     }
-    return double.parse(p) * sign;
+    try {
+      return double.parse(p) * sign;
+    } catch (e) {
+      _log.warning('Failed to parse price change: $p, ($priceChangeStr)');
+      return 0;
+    }
   }
 
   String? _yahooTicker(String ticker) {
@@ -457,7 +462,7 @@ class MarketData extends AbstractDownloader {
     return largestCompanyYahooTickers[ticker];
   }
 
-  Future<List<MarketCapEntry>?> _marketCapStocks() async {
+  Future<List<MarketCapEntry>?> _marketCapStocks(serverUrl) async {
     const url =
         'https://www.tradingview.com/markets/world-stocks/worlds-largest-companies/';
     final data = await downloadFile(url, {});
@@ -490,11 +495,6 @@ class MarketData extends AbstractDownloader {
       if (tickerCell.children.length < 3) {
         continue; // Skip rows without sufficient ticker cell children
       }
-      final img = tickerCell.children[1];
-      if (!img.className.startsWith('logo')) {
-        continue; // Skip rows without an image
-      }
-      final image = img.attributes['src'];
       final link = tickerCell.children[2];
       final ticker = link.text.trim();
       final sup = tickerCell.children[3];
@@ -511,6 +511,9 @@ class MarketData extends AbstractDownloader {
       final price = _parseTVAmount(priceStr);
       // get the price change percent from the fifth cell
       final priceChangeStr = cells[4].text.trim();
+      if (priceChangeStr == '—') {
+        continue; // Skip rows strange price change
+      }
       final priceChange = _parseTVPriceChange(priceChangeStr);
       // create the market cap entry
       entries.add(
@@ -523,7 +526,7 @@ class MarketData extends AbstractDownloader {
           marketCap: marketCap,
           ticker: ticker,
           name: name,
-          image: image,
+          image: '$serverUrl/images/logos_stock/${ticker.toUpperCase()}.svg',
           type: MarketCap.stocks,
         ),
       );
@@ -560,7 +563,7 @@ class MarketData extends AbstractDownloader {
           _log.warning('Failed to download data for crypto');
           return null;
         }
-        data = await _marketCapStocks();
+        data = await _marketCapStocks(serverUrl);
         if (data != null) {
           stocksData = data;
         } else {
@@ -596,7 +599,7 @@ class MarketData extends AbstractDownloader {
         sources = [MarketData.coinGeckoSource];
       case MarketCap.stocks:
         // Fetch and parse data for stocks
-        final data = await _marketCapStocks();
+        final data = await _marketCapStocks(serverUrl);
         if (data != null) {
           stocksData = data;
         } else {
@@ -605,8 +608,6 @@ class MarketData extends AbstractDownloader {
         }
         description = 'Stocks';
         sources = ['TODO'];
-        final tickers = data.map((e) => e.ticker).toSet();
-        _log.info('Tickers: $tickers');
     }
     // Combine all data into a single list
     // and sort the data by market cap in descending order

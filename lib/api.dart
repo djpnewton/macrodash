@@ -187,4 +187,46 @@ class ServerApi {
       );
     }
   }
+
+  /// Fetches and parses the market cap data into a MarketCapSeries object.
+  Future<Result<MarketCapSeries>> fetchMarketCapSeries(MarketCap type) async {
+    const url = '$macrodashServerUrl/market/cap';
+    final queryParameters = {'type': type.name};
+    final result = await downloadFile(url, queryParameters);
+    switch (result) {
+      case Ok():
+        log.info('Market cap data downloaded successfully from $url');
+        final marketCapJson = jsonDecode(result.value);
+        if (marketCapJson == null) {
+          log.severe('Failed to parse market cap data from $url');
+          return Result.error(Exception('Failed to parse market cap data'));
+        }
+        return Result.ok(MarketCapSeries.fromJson(marketCapJson));
+      case Error():
+        log.severe('Failed to download market cap data from $url');
+        return Result.error(Exception(result.error));
+    }
+  }
+
+  /// Fetches and parses a sparkline into a YahooSparklineData object.
+  Future<Result<YahooSparklineData>> fetchYahooSparkline(String ticker) async {
+    const url = '$macrodashServerUrl/market/sparkline';
+    final queryParameters = {'ticker': ticker};
+    final result = await downloadFile(url, queryParameters);
+    switch (result) {
+      case Ok():
+        log.info('Yahoo sparkline data downloaded successfully from $url');
+        final sparklineJson = jsonDecode(result.value);
+        if (sparklineJson == null) {
+          log.severe('Failed to parse Yahoo sparkline data from $url');
+          return Result.error(
+            Exception('Failed to parse Yahoo sparkline data'),
+          );
+        }
+        return Result.ok(YahooSparklineData.fromJson(sparklineJson));
+      case Error():
+        log.severe('Failed to download Yahoo sparkline data from $url');
+        return Result.error(Exception(result.error));
+    }
+  }
 }

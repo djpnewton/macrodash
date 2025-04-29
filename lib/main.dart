@@ -5,13 +5,14 @@ import 'package:url_launcher/url_launcher.dart';
 import 'config.dart';
 import 'settings.dart';
 import 'amount_series_page.dart';
+import 'market_cap_page.dart';
 import 'settings_page.dart';
 import 'about_page.dart';
 import 'package:macrodash_models/models.dart';
 
 final log = Logger('mainlogger');
 
-enum AppPage { m2, debt, bondRates, indexes, settings, about }
+enum AppPage { m2, debt, bondRates, indexes, marketCap, settings, about }
 
 void main() {
   Logger.root.level = Level.ALL; // defaults to Level.INFO
@@ -132,6 +133,15 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
           );
           break;
+        case AppPage.marketCap:
+          log.info('Navigating to Market Cap');
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => MarketCapPage(title: 'Market Cap'),
+            ),
+          );
+          break;
         case AppPage.settings:
           log.info('Navigating to Settings');
           Navigator.push(
@@ -203,7 +213,7 @@ class _MyHomePageState extends State<MyHomePage> {
               leading: const Icon(Icons.money),
               title: const Text('M2'),
               onTap: () {
-                Navigator.pop(context); // Close the drawer
+                Navigator.pop(context);
                 _navigateToPage(AppPage.m2);
               },
             ),
@@ -211,7 +221,7 @@ class _MyHomePageState extends State<MyHomePage> {
               leading: const Icon(Icons.account_balance),
               title: const Text('Debt'),
               onTap: () {
-                Navigator.pop(context); // Close the drawer
+                Navigator.pop(context);
                 _navigateToPage(AppPage.debt);
               },
             ),
@@ -219,7 +229,7 @@ class _MyHomePageState extends State<MyHomePage> {
               leading: const Icon(Icons.percent),
               title: const Text('Bond Rates'),
               onTap: () {
-                Navigator.pop(context); // Close the drawer
+                Navigator.pop(context);
                 _navigateToPage(AppPage.bondRates);
               },
             ),
@@ -227,8 +237,16 @@ class _MyHomePageState extends State<MyHomePage> {
               leading: const Icon(Icons.bar_chart),
               title: const Text('Indexes'),
               onTap: () {
-                Navigator.pop(context); // Close the drawer
+                Navigator.pop(context);
                 _navigateToPage(AppPage.indexes);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.pie_chart),
+              title: const Text('Market Cap'),
+              onTap: () {
+                Navigator.pop(context);
+                _navigateToPage(AppPage.marketCap);
               },
             ),
             const Divider(),

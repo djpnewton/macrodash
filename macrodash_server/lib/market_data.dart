@@ -462,7 +462,7 @@ class MarketData extends AbstractDownloader {
     return largestCompanyYahooTickers[ticker];
   }
 
-  Future<List<MarketCapEntry>?> _marketCapStocks(serverUrl) async {
+  Future<List<MarketCapEntry>?> _marketCapStocks(String serverUrl) async {
     const url =
         'https://www.tradingview.com/markets/world-stocks/worlds-largest-companies/';
     final data = await downloadFile(url, {});

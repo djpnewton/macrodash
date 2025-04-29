@@ -2,8 +2,8 @@ import 'dart:io';
 
 import 'package:dart_frog/dart_frog.dart';
 import 'package:shelf/shelf.dart' as shelf;
-import 'package:shelf_static/shelf_static.dart' as shelf_static;
 import 'package:shelf_cors_headers/shelf_cors_headers.dart' as shelf_cors;
+import 'package:shelf_static/shelf_static.dart' as shelf_static;
 
 /// Creates a [Handler] that serves static files (with CORS header) within
 /// provided [path].

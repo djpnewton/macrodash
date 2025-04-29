@@ -18,7 +18,7 @@ class MarketCapPage extends StatefulWidget {
   const MarketCapPage({super.key, required this.title});
 
   final String title;
-  final MarketCap defaultMarket = MarketCap.metals;
+  final MarketCap defaultMarket = MarketCap.all;
 
   @override
   State<MarketCapPage> createState() => _MarketCapPageState();
@@ -164,122 +164,154 @@ class _MarketCapPageState extends State<MarketCapPage> {
   }
 
   Widget _marketCapRow(int index, {bool header = false}) {
+    final size = MediaQuery.of(context).size;
+    final smallWidth = size.width < 750;
+    final verySmallWidth = size.width < 500;
     final asset = _marketCapSeries!.data[index];
     final marketCap = _formatMarketCap(asset.marketCap);
     final price = _formatPrice(asset.price);
     final priceChange = _formatPriceChange(asset.priceChangePercent24h);
+    final imgSize = 24.0;
+    final image =
+        (asset.image != null)
+            ? asset.image!.endsWith('.svg')
+                ? SvgPicture.network(
+                  asset.image!,
+                  width: imgSize,
+                  height: imgSize,
+                )
+                : Image.network(asset.image!, width: imgSize, height: imgSize)
+            : Image.asset('assets/coin.png', width: imgSize, height: imgSize);
+    final dividerSize = verySmallWidth ? 5.0 : 8.0;
+    final nameCellSize = smallWidth ? 150.0 : 200.0;
+    final nameTextSize = nameCellSize - dividerSize - imgSize;
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 50),
-              child:
-                  header
-                      ? Center(
-                        child: Text(
-                          'Rank',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      )
-                      : Text('${index + 1}', textAlign: TextAlign.right),
-            ),
-            const SizedBox(width: 8),
-            ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 200, maxWidth: 200),
-              child:
-                  header
-                      ? Center(
-                        child: Text(
-                          'Name',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      )
-                      : Row(
-                        children: [
-                          (asset.image != null)
-                              ? asset.image!.endsWith('.svg')
-                                  ? SvgPicture.network(
-                                    asset.image!,
-                                    width: 24,
-                                    height: 24,
-                                  )
-                                  : Image.network(
-                                    asset.image!,
-                                    width: 24,
-                                    height: 24,
-                                  )
-                              : Image.asset(
-                                'assets/coin.png',
-                                width: 24,
-                                height: 24,
+        Flexible(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              smallWidth
+                  ? const SizedBox()
+                  : ConstrainedBox(
+                    constraints: const BoxConstraints(minWidth: 50),
+                    child:
+                        header
+                            ? Center(
+                              child: Text(
+                                'Rank',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                          const SizedBox(width: 8),
-                          Text(asset.name),
-                        ],
-                      ),
-            ),
-            const SizedBox(width: 8),
-            ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 100, maxWidth: 100),
-              child:
-                  header
-                      ? Center(
-                        child: Text(
-                          'Market Cap',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                            )
+                            : Text('${index + 1}', textAlign: TextAlign.right),
+                  ),
+              smallWidth ? const SizedBox() : SizedBox(width: dividerSize),
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  minWidth: nameCellSize,
+                  maxWidth: nameCellSize,
+                ),
+                child:
+                    header
+                        ? Center(
+                          child: Text(
+                            'Name',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        )
+                        : Row(
+                          children: [
+                            image,
+                            SizedBox(width: dividerSize),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    maxWidth: nameTextSize,
+                                  ),
+                                  child: Text(
+                                    asset.name,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                smallWidth
+                                    ? Text(
+                                      '${index + 1}',
+                                      style: TextStyle(color: Colors.grey),
+                                    )
+                                    : SizedBox(),
+                              ],
+                            ),
+                          ],
                         ),
-                      )
-                      : Center(child: Text(marketCap)),
-            ),
-            const SizedBox(width: 8),
-            ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 100, maxWidth: 100),
-              child:
-                  header
-                      ? Center(
-                        child: Text(
-                          'Price',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(width: dividerSize),
+              ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 70, maxWidth: 70),
+                child:
+                    header
+                        ? Center(
+                          child: Text(
+                            'Market Cap',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        )
+                        : Center(child: Text(marketCap)),
+              ),
+              SizedBox(width: dividerSize),
+              ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 65, maxWidth: 65),
+                child:
+                    header
+                        ? Center(
+                          child: Text(
+                            'Price',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        )
+                        : Center(child: Text(price)),
+              ),
+              SizedBox(width: dividerSize),
+              ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 45, maxWidth: 45),
+                child:
+                    header
+                        ? Center(
+                          child: Text(
+                            '24h',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        )
+                        : Center(child: priceChange),
+              ),
+              SizedBox(width: dividerSize),
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  minWidth: verySmallWidth ? 75.0 : 100,
+                  maxWidth: verySmallWidth ? 75.0 : 100,
+                ),
+                child:
+                    header
+                        ? Center(
+                          child: Text(
+                            'Price (1w)',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        )
+                        : Center(
+                          child: _sparkline(
+                            asset.ticker,
+                            asset.sparkline,
+                            asset.sparklineTimestamps,
+                          ),
                         ),
-                      )
-                      : Center(child: Text(price)),
-            ),
-            const SizedBox(width: 8),
-            ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 100, maxWidth: 100),
-              child:
-                  header
-                      ? Center(
-                        child: Text(
-                          '24h',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      )
-                      : Center(child: priceChange),
-            ),
-            const SizedBox(width: 8),
-            ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 100, maxWidth: 100),
-              child:
-                  header
-                      ? Center(
-                        child: Text(
-                          'Price (1w)',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      )
-                      : Center(
-                        child: _sparkline(
-                          asset.ticker,
-                          asset.sparkline,
-                          asset.sparklineTimestamps,
-                        ),
-                      ),
-            ),
-            //TODO: reformat for smaller screens
-          ],
+              ),
+            ],
+          ),
         ),
         const Divider(),
       ],

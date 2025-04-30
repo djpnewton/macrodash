@@ -61,9 +61,15 @@ enum BondRateRegion { usa }
 final bondRateRegionLabels = {BondRateRegion.usa: 'USA'};
 
 /// Enum to represent the term of bond.
-enum BondTerm { thirtyYear, twentyYear }
+enum BondTerm { thirtyYear, twentyYear, tenYear, fiveYear, oneYear }
 
-final bondTermLabels = {BondTerm.thirtyYear: '30Y', BondTerm.twentyYear: '20Y'};
+final bondTermLabels = {
+  BondTerm.thirtyYear: '30Y',
+  BondTerm.twentyYear: '20Y',
+  BondTerm.tenYear: '10Y',
+  BondTerm.fiveYear: '5Y',
+  BondTerm.oneYear: '1Y',
+};
 
 /// Enum to represent the market index region.
 enum MarketIndexRegion { usa, europe, asia }

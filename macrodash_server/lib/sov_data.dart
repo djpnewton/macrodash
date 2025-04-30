@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:archive/archive.dart';
 import 'package:csv/csv.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
 import 'package:macrodash_models/models.dart';
 import 'package:macrodash_server/abstract_downloader.dart';
@@ -129,23 +130,19 @@ class SovData extends AbstractDownloader {
     return downloadFile(url, queryParameters);
   }
 
-  /// Downloads the latest US Bond Rate data in JSON format from the treasury
-  /// API
-  Future<String?> _downloadUsBondRateData({
-    int? pageNumber,
-    int? pageSize,
-  }) async {
+  /// Downloads the latest US Bond Rate data in CSV format from the treasury
+  /// website
+  Future<String?> _downloadUsBondRateData(
+    int year,
+  ) async {
     final queryParameters = {
-      'format': 'json',
+      '_format': 'csv',
+      'type': 'daily_treasury_yield_curve',
+      'field_tdr_date_value': year.toString(),
     };
-    if (pageNumber != null) {
-      queryParameters['page[number]'] = pageNumber.toString();
-    }
-    if (pageSize != null) {
-      queryParameters['page[size]'] = pageSize.toString();
-    }
-    const url =
-        'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/auctions_query';
+
+    final url =
+        'https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/$year/all';
     return downloadFile(url, queryParameters);
   }
 
@@ -408,81 +405,87 @@ class SovData extends AbstractDownloader {
   /// Fetches and parses the US Bond Rate data into a list of AmountEntry
   /// objects.
   Future<List<BondRateData>?> usBondRateData() async {
-    var jsonData = await _downloadUsBondRateData(pageSize: 10000);
-    if (jsonData == null) {
-      _log.warning('Failed to fetch US Bond Rate data.');
-      return null;
-    }
-
-    try {
-      // Parse the JSON data
-      var parsedJson = jsonDecode(jsonData);
-      // ignore: avoid_dynamic_calls
-      final links = parsedJson['links'] as Map<String, dynamic>;
-      _log.info('Links: $links');
-      // Extract the data
-      final last = links['last'] as String;
-      _log.info('Last link: $last');
-      // parse query string 'last'
-      final lastParams = Uri.parse('http://example.com?$last').queryParameters;
-      _log.info('Last params: $lastParams');
-      final pageNumber = int.tryParse(lastParams['page[number]'] ?? '');
-      final pageSize = int.tryParse(lastParams['page[size]'] ?? '');
-      if (pageNumber == null || pageSize == null) {
-        _log.warning('Failed to parse US Bond Rate data.');
-        return null;
-      }
-      // Download the data again with the page number and size
-      jsonData = await _downloadUsBondRateData(
-        pageNumber: pageNumber,
-        pageSize: pageSize,
-      );
-      if (jsonData == null) {
+    // Get the current year
+    final year = DateTime.now().year;
+    // Get the last 5 years of data
+    final bond30yData = <AmountEntry>[];
+    final bond20yData = <AmountEntry>[];
+    final bond10yData = <AmountEntry>[];
+    final bond5yData = <AmountEntry>[];
+    final bond1yData = <AmountEntry>[];
+    for (var i = 0; i < 5; i++) {
+      final yearToFetch = year - i;
+      final csvData = await _downloadUsBondRateData(yearToFetch);
+      if (csvData == null) {
         _log.warning('Failed to fetch US Bond Rate data.');
         return null;
       }
-      // Parse the JSON data
-      parsedJson = jsonDecode(jsonData);
-      // ignore: avoid_dynamic_calls
-      final observations = parsedJson['data'] as List<dynamic>;
+      // Parse the CSV data
+      final rows = const CsvToListConverter().convert(csvData, eol: '\n');
+      if (rows.isEmpty) {
+        _log.warning('No data found in the CSV.');
+        return null;
+      }
+      // Extract the header row
+      // header row has the format: Date	1 Mo	1.5 Month	2 Mo	3 Mo	4 Mo	6 Mo
+      //	1 Yr	2 Yr	3 Yr	5 Yr	7 Yr	10 Yr	20 Yr	30 Yr
+      final headers = rows.first.cast<String>();
+      _log.info('CSV headers: $headers');
+      final dateIndex = headers.indexOf('Date');
+      final bond30yIndex = headers.indexOf('30 Yr');
+      final bond20yIndex = headers.indexOf('20 Yr');
+      final bond10yIndex = headers.indexOf('10 Yr');
+      final bond5yIndex = headers.indexOf('5 Yr');
+      final bond1yIndex = headers.indexOf('1 Yr');
+      if (dateIndex == -1 ||
+          bond30yIndex == -1 ||
+          bond20yIndex == -1 ||
+          bond10yIndex == -1 ||
+          bond5yIndex == -1 ||
+          bond1yIndex == -1) {
+        _log.warning(
+          'Required fields not found in the CSV.',
+        );
+        return null;
+      }
       // Extract the data
-      final bond30yData = <AmountEntry>[];
-      final bond20yData = <AmountEntry>[];
-
-      for (final entry in observations) {
-        // ignore: avoid_dynamic_calls
-        final securityType = entry['security_type'] as String;
-        // ignore: avoid_dynamic_calls
-        final securityTerm = entry['security_term'] as String;
-
-        if (securityType != 'Bond') {
-          continue;
-        }
-        if (securityTerm != '30-Year' && securityTerm != '20-Year') {
-          continue;
-        }
-
-        // ignore: avoid_dynamic_calls
-        final date = DateTime.parse(entry['record_date'] as String);
-        // ignore: avoid_dynamic_calls
-        final amount = double.parse(entry['avg_med_yield'] as String);
-
-        if (securityType == 'Bond' && securityTerm == '30-Year') {
-          bond30yData.add(AmountEntry(date: date, amount: amount));
-        }
-        if (securityType == 'Bond' && securityTerm == '20-Year') {
-          bond20yData.add(AmountEntry(date: date, amount: amount));
+      for (final row in rows.skip(1)) {
+        try {
+          // parse date in format MM/DD/YYYY
+          final date =
+              DateFormat('MM/dd/yyyy').parse(row[dateIndex]!.toString());
+          final bond30y = double.tryParse(row[bond30yIndex]!.toString());
+          if (bond30y != null) {
+            bond30yData.insert(0, AmountEntry(date: date, amount: bond30y));
+          }
+          final bond20y = double.tryParse(row[bond20yIndex]!.toString());
+          if (bond20y != null) {
+            bond20yData.insert(0, AmountEntry(date: date, amount: bond20y));
+          }
+          final bond10y = double.tryParse(row[bond10yIndex]!.toString());
+          if (bond10y != null) {
+            bond10yData.insert(0, AmountEntry(date: date, amount: bond10y));
+          }
+          final bond5y = double.tryParse(row[bond5yIndex]!.toString());
+          if (bond5y != null) {
+            bond5yData.insert(0, AmountEntry(date: date, amount: bond5y));
+          }
+          final bond1y = double.tryParse(row[bond1yIndex]!.toString());
+          if (bond1y != null) {
+            bond1yData.insert(0, AmountEntry(date: date, amount: bond1y));
+          }
+        } catch (e) {
+          _log.warning('Error parsing row: $row. Skipping. Error: $e');
         }
       }
-
-      _log.info('US Bond Rate data parsed successfully.');
-      return [
-        BondRateData(term: BondTerm.thirtyYear, data: bond30yData),
-        BondRateData(term: BondTerm.twentyYear, data: bond20yData),
-      ];
-    } catch (e) {
-      _log.severe('Error parsing US Bond Rate data: $e');
-      return null;
     }
+    _log.info('US Bond Rate data parsed successfully.');
+    return [
+      BondRateData(term: BondTerm.thirtyYear, data: bond30yData),
+      BondRateData(term: BondTerm.twentyYear, data: bond20yData),
+      BondRateData(term: BondTerm.tenYear, data: bond10yData),
+      BondRateData(term: BondTerm.fiveYear, data: bond5yData),
+      BondRateData(term: BondTerm.oneYear, data: bond1yData),
+    ];
   }
 }

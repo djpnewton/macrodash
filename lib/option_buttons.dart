@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
+import 'package:share_plus/share_plus.dart';
 
 import 'package:macrodash_models/models.dart';
 
@@ -255,6 +258,82 @@ class FullscreenButton extends StatelessWidget {
       isSelected: isFullscreen(),
       onPressed: () => _toggleFullscreen(),
       icon: isFullscreen() ? Icons.fullscreen_exit : Icons.fullscreen,
+    );
+  }
+}
+
+enum ShareMethod { copy, share }
+
+/// a share button implementing optionbutton
+class ShareButton extends StatelessWidget {
+  const ShareButton({super.key, required this.uri, this.queryParams});
+  final Uri uri;
+  final Map<String, String>? queryParams;
+
+  void _share(BuildContext context) {
+    final query = Uri(queryParameters: queryParams).query;
+    // manually construct the share URI to conform to flutter routing
+    // uris where the query is after the fragment
+    final shareUri = 'https://macrodash.me/#${uri.path}?$query';
+    final isWebMobile =
+        kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.iOS ||
+            defaultTargetPlatform == TargetPlatform.android);
+    showDialog<ShareMethod>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Select how you want to share the link:'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(shareUri.toString()),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  TextButton.icon(
+                    label: const Text('Copy Link'),
+                    icon: const Icon(Icons.copy),
+                    onPressed: () {
+                      Clipboard.setData(
+                        ClipboardData(text: shareUri.toString()),
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Link copied to clipboard')),
+                      );
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                  if (isWebMobile) ...[
+                    TextButton.icon(
+                      label: const Text('Share Link'),
+                      icon: const Icon(Icons.share),
+                      onPressed: () {
+                        SharePlus.instance.share(ShareParams(text: shareUri));
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text('Link shared')));
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return OptionButton(
+      label: '',
+      isSelected: false,
+      onPressed: () => _share(context),
+      icon: Icons.share,
     );
   }
 }

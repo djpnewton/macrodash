@@ -42,9 +42,10 @@ final _router = GoRouter(
               (context, state) => AmountSeriesPage(
                 title: 'M2',
                 chartLibrary: chartLibrary,
-                defaultRegion: M2Region.usa,
+                region: state.uri.queryParameters['region'],
                 regions: M2Region.values,
                 regionLabels: m2RegionLabels,
+                zoom: state.uri.queryParameters['zoom'],
               ),
         ),
         GoRoute(
@@ -54,9 +55,10 @@ final _router = GoRouter(
               (context, state) => AmountSeriesPage(
                 title: 'Debt',
                 chartLibrary: chartLibrary,
-                defaultRegion: DebtRegion.usa,
+                region: state.uri.queryParameters['region'],
                 regions: DebtRegion.values,
                 regionLabels: debtRegionLabels,
+                zoom: state.uri.queryParameters['zoom'],
               ),
         ),
         GoRoute(
@@ -66,12 +68,14 @@ final _router = GoRouter(
               (context, state) => AmountSeriesPage(
                 title: 'Bond Rates',
                 chartLibrary: chartLibrary,
-                defaultRegion: BondRateRegion.usa,
+                region: state.uri.queryParameters['region'],
                 regions: BondRateRegion.values,
                 regionLabels: bondRateRegionLabels,
+                category: state.uri.queryParameters['category'],
                 categories: [BondTerm.values],
                 categoryLabels: [bondTermLabels],
                 categoryTitles: ['Term'],
+                zoom: state.uri.queryParameters['zoom'],
               ),
         ),
         GoRoute(
@@ -81,9 +85,10 @@ final _router = GoRouter(
               (context, state) => AmountSeriesPage(
                 title: 'Indexes',
                 chartLibrary: chartLibrary,
-                defaultRegion: MarketIndexRegion.usa,
+                region: state.uri.queryParameters['region'],
                 regions: MarketIndexRegion.values,
                 regionLabels: marketIndexRegionLabels,
+                category: state.uri.queryParameters['category'],
                 categories: [
                   MarketIndexUsa.values,
                   MarketIndexEurope.values,
@@ -95,12 +100,17 @@ final _router = GoRouter(
                   marketIndexAsiaLabels,
                 ],
                 categoryTitles: ['Index', 'Index', 'Index'],
+                zoom: state.uri.queryParameters['zoom'],
               ),
         ),
         GoRoute(
           name: AppPage.marketCap.name,
           path: '/marketCap',
-          builder: (context, state) => MarketCapPage(title: 'Market Cap'),
+          builder:
+              (context, state) => MarketCapPage(
+                title: 'Market Cap',
+                market: state.uri.queryParameters['market'],
+              ),
         ),
         GoRoute(
           name: AppPage.settings.name,

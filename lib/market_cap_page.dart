@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -16,10 +17,10 @@ final Logger log = Logger('market_cap_page');
 enum SparklineStatus { loading, error, success }
 
 class MarketCapPage extends StatefulWidget {
-  const MarketCapPage({super.key, required this.title});
+  const MarketCapPage({super.key, required this.title, this.market});
 
   final String title;
-  final MarketCap defaultMarket = MarketCap.all;
+  final String? market;
 
   @override
   State<MarketCapPage> createState() => _MarketCapPageState();
@@ -37,7 +38,13 @@ class _MarketCapPageState extends State<MarketCapPage> {
   void initState() {
     super.initState();
     // Initialize with the default market
-    _selectedMarket = widget.defaultMarket;
+    _selectedMarket =
+        widget.market != null
+            ? MarketCap.values.firstWhere(
+              (market) => market.name == widget.market,
+              orElse: () => MarketCap.all,
+            )
+            : MarketCap.all;
     _fetchData();
   }
 
@@ -364,6 +371,10 @@ class _MarketCapPageState extends State<MarketCapPage> {
     final popouts = smallWidth || smallHeight;
     final optionsSide = smallHeight;
     final fullscreenButton = FullscreenButton();
+    final shareButton = ShareButton(
+      uri: GoRouterState.of(context).uri,
+      queryParams: {'market': _selectedMarket.name},
+    );
     final categoryButtons = OptionButtons<MarketCap>(
       popoutTitle: 'Category',
       selectedOption: _selectedMarket,
@@ -416,7 +427,7 @@ class _MarketCapPageState extends State<MarketCapPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('${widget.title} Data Visualization'),
-        actions: [if (kIsWeb) fullscreenButton],
+        actions: [if (kIsWeb) fullscreenButton, shareButton],
       ),
       body:
           optionsSide

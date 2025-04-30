@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -11,6 +12,7 @@ import 'about_page.dart';
 import 'package:macrodash_models/models.dart';
 
 final log = Logger('mainlogger');
+ChartLibrary chartLibrary = ChartLibrary.financialChart;
 
 enum AppPage { m2, debt, bondRates, indexes, marketCap, settings, about }
 
@@ -26,17 +28,106 @@ void main() {
   runApp(const MyApp());
 }
 
+final _router = GoRouter(
+  routes: [
+    GoRoute(
+      name: 'home',
+      path: '/',
+      builder: (context, state) => const MyHomePage(title: 'MacroDash'),
+      routes: <RouteBase>[
+        GoRoute(
+          name: AppPage.m2.name,
+          path: '/m2',
+          builder:
+              (context, state) => AmountSeriesPage(
+                title: 'M2',
+                chartLibrary: chartLibrary,
+                defaultRegion: M2Region.usa,
+                regions: M2Region.values,
+                regionLabels: m2RegionLabels,
+              ),
+        ),
+        GoRoute(
+          name: AppPage.debt.name,
+          path: '/debt',
+          builder:
+              (context, state) => AmountSeriesPage(
+                title: 'Debt',
+                chartLibrary: chartLibrary,
+                defaultRegion: DebtRegion.usa,
+                regions: DebtRegion.values,
+                regionLabels: debtRegionLabels,
+              ),
+        ),
+        GoRoute(
+          name: AppPage.bondRates.name,
+          path: '/bondRates',
+          builder:
+              (context, state) => AmountSeriesPage(
+                title: 'Bond Rates',
+                chartLibrary: chartLibrary,
+                defaultRegion: BondRateRegion.usa,
+                regions: BondRateRegion.values,
+                regionLabels: bondRateRegionLabels,
+                categories: [BondTerm.values],
+                categoryLabels: [bondTermLabels],
+                categoryTitles: ['Term'],
+              ),
+        ),
+        GoRoute(
+          name: AppPage.indexes.name,
+          path: '/indexes',
+          builder:
+              (context, state) => AmountSeriesPage(
+                title: 'Indexes',
+                chartLibrary: chartLibrary,
+                defaultRegion: MarketIndexRegion.usa,
+                regions: MarketIndexRegion.values,
+                regionLabels: marketIndexRegionLabels,
+                categories: [
+                  MarketIndexUsa.values,
+                  MarketIndexEurope.values,
+                  MarketIndexAsia.values,
+                ],
+                categoryLabels: [
+                  marketIndexUsaLabels,
+                  marketIndexEuropeLabels,
+                  marketIndexAsiaLabels,
+                ],
+                categoryTitles: ['Index', 'Index', 'Index'],
+              ),
+        ),
+        GoRoute(
+          name: AppPage.marketCap.name,
+          path: '/marketCap',
+          builder: (context, state) => MarketCapPage(title: 'Market Cap'),
+        ),
+        GoRoute(
+          name: AppPage.settings.name,
+          path: '/settings',
+          builder: (context, state) => const SettingsPage(),
+        ),
+        GoRoute(
+          name: AppPage.about.name,
+          path: '/about',
+          builder: (context, state) => const AboutPage(),
+        ),
+      ],
+    ),
+  ],
+);
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       title: 'MacroDash',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const MyHomePage(title: 'MacroDash'),
+      routerConfig: _router,
     );
   }
 }
@@ -52,110 +143,34 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   void _navigateToPage(AppPage page) async {
-    final chartLibrary = await Settings.loadChartLibrary();
+    // close the drawer
+    Navigator.pop(context);
+    // load the chart library setting
+    chartLibrary = await Settings.loadChartLibrary();
+    // navigate to the selected page
     if (mounted) {
       switch (page) {
         case AppPage.m2:
           log.info('Navigating to M2');
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder:
-                  (context) => AmountSeriesPage(
-                    title: 'M2',
-                    chartLibrary: chartLibrary,
-                    defaultRegion: M2Region.usa,
-                    regions: M2Region.values,
-                    regionLabels: m2RegionLabels,
-                  ),
-            ),
-          );
-          break;
+          context.goNamed(AppPage.m2.name);
         case AppPage.debt:
           log.info('Navigating to Debt');
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder:
-                  (context) => AmountSeriesPage(
-                    title: 'Debt',
-                    chartLibrary: chartLibrary,
-                    defaultRegion: DebtRegion.usa,
-                    regions: DebtRegion.values,
-                    regionLabels: debtRegionLabels,
-                  ),
-            ),
-          );
-          break;
+          context.goNamed(AppPage.debt.name);
         case AppPage.bondRates:
           log.info('Navigating to Bond Rates');
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder:
-                  (context) => AmountSeriesPage(
-                    title: 'Bond Rates',
-                    chartLibrary: chartLibrary,
-                    defaultRegion: BondRateRegion.usa,
-                    regions: BondRateRegion.values,
-                    regionLabels: bondRateRegionLabels,
-                    categories: [BondTerm.values],
-                    categoryLabels: [bondTermLabels],
-                    categoryTitles: ['Term'],
-                  ),
-            ),
-          );
-          break;
+          context.goNamed(AppPage.bondRates.name);
         case AppPage.indexes:
           log.info('Navigating to Indexes');
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder:
-                  (context) => AmountSeriesPage(
-                    title: 'Indexes',
-                    chartLibrary: chartLibrary,
-                    defaultRegion: MarketIndexRegion.usa,
-                    regions: MarketIndexRegion.values,
-                    regionLabels: marketIndexRegionLabels,
-                    categories: [
-                      MarketIndexUsa.values,
-                      MarketIndexEurope.values,
-                      MarketIndexAsia.values,
-                    ],
-                    categoryLabels: [
-                      marketIndexUsaLabels,
-                      marketIndexEuropeLabels,
-                      marketIndexAsiaLabels,
-                    ],
-                    categoryTitles: ['Index', 'Index', 'Index'],
-                  ),
-            ),
-          );
-          break;
+          context.goNamed(AppPage.indexes.name);
         case AppPage.marketCap:
           log.info('Navigating to Market Cap');
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => MarketCapPage(title: 'Market Cap'),
-            ),
-          );
-          break;
+          context.goNamed(AppPage.marketCap.name);
         case AppPage.settings:
           log.info('Navigating to Settings');
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const SettingsPage()),
-          );
-          break;
+          context.goNamed(AppPage.settings.name);
         case AppPage.about:
           log.info('Navigating to About');
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const AboutPage()),
-          );
-          break;
+          context.goNamed(AppPage.about.name);
       }
     }
   }
@@ -212,42 +227,27 @@ class _MyHomePageState extends State<MyHomePage> {
             ListTile(
               leading: const Icon(Icons.money),
               title: const Text('M2'),
-              onTap: () {
-                Navigator.pop(context);
-                _navigateToPage(AppPage.m2);
-              },
+              onTap: () => _navigateToPage(AppPage.m2),
             ),
             ListTile(
               leading: const Icon(Icons.account_balance),
               title: const Text('Debt'),
-              onTap: () {
-                Navigator.pop(context);
-                _navigateToPage(AppPage.debt);
-              },
+              onTap: () => _navigateToPage(AppPage.debt),
             ),
             ListTile(
               leading: const Icon(Icons.percent),
               title: const Text('Bond Rates'),
-              onTap: () {
-                Navigator.pop(context);
-                _navigateToPage(AppPage.bondRates);
-              },
+              onTap: () => _navigateToPage(AppPage.bondRates),
             ),
             ListTile(
               leading: const Icon(Icons.bar_chart),
               title: const Text('Indexes'),
-              onTap: () {
-                Navigator.pop(context);
-                _navigateToPage(AppPage.indexes);
-              },
+              onTap: () => _navigateToPage(AppPage.indexes),
             ),
             ListTile(
               leading: const Icon(Icons.pie_chart),
               title: const Text('Market Cap'),
-              onTap: () {
-                Navigator.pop(context);
-                _navigateToPage(AppPage.marketCap);
-              },
+              onTap: () => _navigateToPage(AppPage.marketCap),
             ),
             const Divider(),
             ListTile(
@@ -270,18 +270,12 @@ class _MyHomePageState extends State<MyHomePage> {
             ListTile(
               leading: const Icon(Icons.settings),
               title: const Text('Settings'),
-              onTap: () {
-                Navigator.pop(context); // Close the drawer
-                _navigateToPage(AppPage.settings);
-              },
+              onTap: () => _navigateToPage(AppPage.settings),
             ),
             ListTile(
               leading: const Icon(Icons.info),
               title: const Text('About'),
-              onTap: () {
-                Navigator.pop(context); // Close the drawer
-                _navigateToPage(AppPage.about);
-              },
+              onTap: () => _navigateToPage(AppPage.about),
             ),
           ],
         ),

@@ -16,7 +16,7 @@ class Settings {
   static Future<ChartLibrary> loadChartLibrary() async {
     final prefs = await SharedPreferences.getInstance();
     final value =
-        prefs.getString(_chartLibraryKey) ?? ChartLibrary.flChart.name;
+        prefs.getString(_chartLibraryKey) ?? ChartLibrary.financialChart.name;
     // If the value is not found, return the default value
     return ChartLibrary.values.firstWhere(
       (e) => e.name == value,

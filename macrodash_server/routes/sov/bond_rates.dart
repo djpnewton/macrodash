@@ -62,6 +62,9 @@ Future<Response> onRequest(RequestContext context) async {
   final description = switch (term) {
     BondTerm.thirtyYear => '30-Year Treasury Rate',
     BondTerm.twentyYear => '20-Year Treasury Rate',
+    BondTerm.tenYear => '10-Year Treasury Rate',
+    BondTerm.fiveYear => '5-Year Treasury Rate',
+    BondTerm.oneYear => '1-Year Treasury Rate',
   };
 
   final result = AmountSeries(

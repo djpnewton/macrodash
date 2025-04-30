@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:macrodash_models/models.dart';
 
@@ -182,9 +183,11 @@ class _MarketCapPageState extends State<MarketCapPage> {
                 )
                 : Image.network(asset.image!, width: imgSize, height: imgSize)
             : Image.asset('assets/coin.png', width: imgSize, height: imgSize);
+    final buttonPadding = smallWidth ? 4.0 : 8.0;
     final dividerSize = verySmallWidth ? 5.0 : 8.0;
     final nameCellSize = smallWidth ? 150.0 : 200.0;
-    final nameTextSize = nameCellSize - dividerSize - imgSize;
+    final nameTextSize =
+        nameCellSize - dividerSize - imgSize - buttonPadding * 2;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -222,31 +225,50 @@ class _MarketCapPageState extends State<MarketCapPage> {
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                         )
-                        : Row(
-                          children: [
-                            image,
-                            SizedBox(width: dividerSize),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                ConstrainedBox(
-                                  constraints: BoxConstraints(
-                                    maxWidth: nameTextSize,
-                                  ),
-                                  child: Text(
-                                    asset.name,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                smallWidth
-                                    ? Text(
-                                      '${index + 1}',
-                                      style: TextStyle(color: Colors.grey),
-                                    )
-                                    : SizedBox(),
-                              ],
+                        : TextButton(
+                          onPressed: () {
+                            if (asset.moreInfoLink != null) {
+                              try {
+                                launchUrl(Uri.parse(asset.moreInfoLink!));
+                              } catch (e) {
+                                log.warning('Unable to launch URL: $e');
+                              }
+                            }
+                          },
+                          style: TextButton.styleFrom(
+                            //minimumSize: Size.zero,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: buttonPadding,
+                              vertical: buttonPadding,
                             ),
-                          ],
+                            //tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: Row(
+                            children: [
+                              image,
+                              SizedBox(width: dividerSize),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  ConstrainedBox(
+                                    constraints: BoxConstraints(
+                                      maxWidth: nameTextSize,
+                                    ),
+                                    child: Text(
+                                      asset.name,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  smallWidth
+                                      ? Text(
+                                        '${index + 1}',
+                                        style: TextStyle(color: Colors.grey),
+                                      )
+                                      : SizedBox(),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
               ),
               SizedBox(width: dividerSize),

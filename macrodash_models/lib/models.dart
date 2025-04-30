@@ -185,6 +185,7 @@ class MarketCapEntry extends Equatable {
   final String name;
   final String? image;
   final MarketCap type;
+  final String? moreInfoLink;
 
   const MarketCapEntry({
     required this.supply,
@@ -199,6 +200,7 @@ class MarketCapEntry extends Equatable {
     required this.name,
     required this.image,
     required this.type,
+    required this.moreInfoLink,
   });
 
   /// Creates an instance of [MarketCapEntry] from a JSON map.
@@ -222,6 +224,7 @@ class MarketCapEntry extends Equatable {
     name,
     image,
     type,
+    moreInfoLink,
   ];
 
   @override

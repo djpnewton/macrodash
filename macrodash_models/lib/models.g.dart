@@ -62,6 +62,7 @@ MarketCapEntry _$MarketCapEntryFromJson(Map<String, dynamic> json) =>
       name: json['name'] as String,
       image: json['image'] as String?,
       type: $enumDecode(_$MarketCapEnumMap, json['type']),
+      moreInfoLink: json['moreInfoLink'] as String?,
     );
 
 Map<String, dynamic> _$MarketCapEntryToJson(MarketCapEntry instance) =>
@@ -78,6 +79,7 @@ Map<String, dynamic> _$MarketCapEntryToJson(MarketCapEntry instance) =>
       'name': instance.name,
       'image': instance.image,
       'type': _$MarketCapEnumMap[instance.type]!,
+      'moreInfoLink': instance.moreInfoLink,
     };
 
 const _$MarketCapEnumMap = {

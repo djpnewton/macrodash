@@ -204,6 +204,7 @@ class MarketData extends AbstractDownloader {
       name: name,
       image: '$serverUrl/images/logos_${type.name}/${name.toLowerCase()}.svg',
       type: type,
+      moreInfoLink: 'https://finance.yahoo.com/quote/$ticker',
     );
   }
 
@@ -309,6 +310,7 @@ class MarketData extends AbstractDownloader {
             // ignore: avoid_dynamic_calls
             image: e['image'] as String,
             type: MarketCap.crypto,
+            moreInfoLink: 'https://www.coingecko.com/en/coins/${e['id']}',
           ),
         )
         .toList();
@@ -515,20 +517,25 @@ class MarketData extends AbstractDownloader {
         continue; // Skip rows strange price change
       }
       final priceChange = _parseTVPriceChange(priceChangeStr);
+      // more info link
+      final yahooTicker = _yahooTicker(ticker);
+      final moreInfoLink = yahooTicker != null
+          ? 'https://finance.yahoo.com/quote/$yahooTicker/'
+          : 'https://www.tradingview.com/symbols/$ticker/';
       // create the market cap entry
       entries.add(
         MarketCapEntry(
-          supply: 0,
-          price: price,
-          high24h: 0,
-          low24h: 0,
-          priceChangePercent24h: priceChange,
-          marketCap: marketCap,
-          ticker: ticker,
-          name: name,
-          image: '$serverUrl/images/logos_stock/${ticker.toUpperCase()}.svg',
-          type: MarketCap.stocks,
-        ),
+            supply: 0,
+            price: price,
+            high24h: 0,
+            low24h: 0,
+            priceChangePercent24h: priceChange,
+            marketCap: marketCap,
+            ticker: ticker,
+            name: name,
+            image: '$serverUrl/images/logos_stock/${ticker.toUpperCase()}.svg',
+            type: MarketCap.stocks,
+            moreInfoLink: moreInfoLink),
       );
     }
     return entries;

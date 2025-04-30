@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/foundation.dart';
 
 import 'package:macrodash_models/models.dart';
@@ -18,22 +19,26 @@ class AmountSeriesPage<T extends Enum, C extends Enum> extends StatefulWidget {
     super.key,
     required this.title,
     required this.chartLibrary,
-    required this.defaultRegion,
+    required this.region,
     required this.regions,
     required this.regionLabels,
+    this.category,
     this.categories = const [],
     this.categoryLabels = const [],
     this.categoryTitles = const [],
+    this.zoom,
   });
 
   final String title;
   final ChartLibrary chartLibrary;
-  final T defaultRegion;
+  final String? region;
   final List<T> regions;
   final Map<T, String> regionLabels;
+  final String? category;
   final List<List<C>> categories;
   final List<Map<C, String>> categoryLabels;
   final List<String> categoryTitles;
+  final String? zoom;
 
   @override
   State<AmountSeriesPage<T, C>> createState() => _AmountSeriesPageState<T, C>();
@@ -53,10 +58,26 @@ class _AmountSeriesPageState<T extends Enum, C extends Enum>
   void initState() {
     super.initState();
     // Initialize with the default region
-    _selectedRegion = widget.defaultRegion;
-    // Initialize with the first category
+    _selectedRegion =
+        widget.region != null
+            ? widget.regions.firstWhere(
+              (region) => region.name == widget.region,
+            )
+            : widget.regions.first;
+    // Initialize with the default category
     if (widget.categories.isNotEmpty) {
-      _selectedCategory = widget.categories.first.first;
+      _selectedCategory =
+          widget.category != null
+              ? widget.categories[_getCategoryIndexFromRegion()].firstWhere(
+                (category) => category.name == widget.category,
+              )
+              : widget.categories[_getCategoryIndexFromRegion()].first;
+    }
+    // Initialize with the default zoom level
+    if (widget.zoom != null) {
+      _selectedZoom = DataRange.values.firstWhere(
+        (zoom) => zoom.name == widget.zoom,
+      );
     }
     _fetchData();
   }
@@ -172,6 +193,14 @@ class _AmountSeriesPageState<T extends Enum, C extends Enum>
     final popouts = smallWidth || smallHeight;
     final optionsSide = smallHeight;
     final fullscreenButton = FullscreenButton();
+    final shareButton = ShareButton(
+      uri: GoRouterState.of(context).uri,
+      queryParams: {
+        'region': _selectedRegion.name,
+        'category': _selectedCategory?.name ?? '',
+        'zoom': _selectedZoom.name,
+      },
+    );
     final regionButtons = OptionButtons<T>(
       popoutTitle: 'Region',
       selectedOption: _selectedRegion,
@@ -243,7 +272,7 @@ class _AmountSeriesPageState<T extends Enum, C extends Enum>
     return Scaffold(
       appBar: AppBar(
         title: Text('${widget.title} Data Visualization'),
-        actions: [if (kIsWeb) fullscreenButton],
+        actions: [if (kIsWeb) fullscreenButton, shareButton],
       ),
       body:
           optionsSide

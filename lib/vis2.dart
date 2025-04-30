@@ -72,6 +72,15 @@ class _VisState extends State<VisFinancialChart> with TickerProviderStateMixin {
             ],
             valueAxes: [
               GValueAxis(
+                axisMarkers: [
+                  GValueAxisMarker.label(
+                    labelValue:
+                        dataSource.getSeriesValue(
+                          point: dataSource.lastPoint,
+                          key: 'amount',
+                        )!,
+                  ),
+                ],
                 overlayMarkers: [
                   GLabelMarker(
                     text: widget.dataSeries?.description ?? '',
@@ -94,7 +103,13 @@ class _VisState extends State<VisFinancialChart> with TickerProviderStateMixin {
                 ],
               ),
             ],
-            pointAxes: [GPointAxis()],
+            pointAxes: [
+              GPointAxis(
+                axisMarkers: [
+                  GPointAxisMarker.label(point: dataSource.lastPoint),
+                ],
+              ),
+            ],
             graphs: [GGraphGrids(), GGraphLine(valueKey: 'amount')],
           ),
         ],

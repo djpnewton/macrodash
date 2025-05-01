@@ -115,6 +115,7 @@ class _AmountSeriesPageState<T extends Enum, C extends Enum>
   }
 
   void _regionSelect(T region) {
+    Settings.saveChartSetting(widget.title, 'region', region.name);
     setState(() {
       _selectedRegion = region;
       if (widget.categories.isNotEmpty) {
@@ -126,6 +127,7 @@ class _AmountSeriesPageState<T extends Enum, C extends Enum>
   }
 
   void _categorySelect(C category) {
+    Settings.saveChartSetting(widget.title, 'category', category.name);
     setState(() {
       _selectedCategory = category;
       _fetchData();
@@ -133,6 +135,7 @@ class _AmountSeriesPageState<T extends Enum, C extends Enum>
   }
 
   void _filterData(DataRange zoomLevel) {
+    Settings.saveChartSetting(widget.title, 'zoom', zoomLevel.name);
     setState(() {
       _selectedZoom = zoomLevel;
       _fetchData().then((_) {

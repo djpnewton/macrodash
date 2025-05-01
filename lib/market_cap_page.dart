@@ -11,6 +11,7 @@ import 'option_buttons.dart';
 import 'result.dart';
 import 'sparkline.dart';
 import 'picture_helper.dart';
+import 'settings.dart';
 
 final Logger log = Logger('market_cap_page');
 
@@ -76,6 +77,7 @@ class _MarketCapPageState extends State<MarketCapPage> {
   }
 
   void _marketSelect(MarketCap market) {
+    Settings.saveChartSetting(widget.title, 'market', market.name);
     setState(() {
       _selectedMarket = market;
       _fetchData();

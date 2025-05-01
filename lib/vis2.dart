@@ -1,8 +1,10 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:financial_chart/financial_chart.dart';
+import 'package:intl/intl.dart';
 
 import 'package:macrodash_models/models.dart';
+
+import 'option_buttons.dart';
 
 class VisFinancialChart extends StatefulWidget {
   final List<AmountEntry> filteredData;
@@ -21,6 +23,8 @@ class VisFinancialChart extends StatefulWidget {
 }
 
 class _VisState extends State<VisFinancialChart> with TickerProviderStateMixin {
+  static const valueKey = 'vk_amount';
+
   @override
   void initState() {
     super.initState();
@@ -38,7 +42,7 @@ class _VisState extends State<VisFinancialChart> with TickerProviderStateMixin {
               )
               .toList(),
       seriesProperties: [
-        GDataSeriesProperty(key: 'amount', label: 'Amount', precision: 2),
+        GDataSeriesProperty(key: valueKey, label: 'Amount', precision: 2),
       ],
     );
   }
@@ -47,6 +51,18 @@ class _VisState extends State<VisFinancialChart> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     final theme = GThemeLight();
     final dataSource = _getDataSource();
+    final startValue = widget.filteredData.first.amount;
+    final endValue = widget.filteredData.last.amount;
+    final change = endValue - startValue;
+    final changePercent = (change / startValue) * 100;
+    final changePercentString = changePercent.toStringAsFixed(2);
+    var timeFrame = ZoomButtons.labels[widget.selectedZoom];
+    if (widget.selectedZoom == DataRange.max) {
+      final DateFormat formatter = DateFormat('MMMM yyyy');
+      final firstDate = widget.filteredData.first.date;
+      final dateStr = formatter.format(firstDate);
+      timeFrame = 'Since $dateStr';
+    }
     return GChartWidget(
       chart: GChart(
         dataSource: dataSource,
@@ -66,7 +82,7 @@ class _VisState extends State<VisFinancialChart> with TickerProviderStateMixin {
               GValueViewPort(
                 valuePrecision: 2,
                 autoScaleStrategy: GValueViewPortAutoScaleStrategyMinMax(
-                  dataKeys: ['amount'],
+                  dataKeys: [valueKey],
                 ),
               ),
             ],
@@ -77,28 +93,8 @@ class _VisState extends State<VisFinancialChart> with TickerProviderStateMixin {
                     labelValue:
                         dataSource.getSeriesValue(
                           point: dataSource.lastPoint,
-                          key: 'amount',
+                          key: valueKey,
                         )!,
-                  ),
-                ],
-                overlayMarkers: [
-                  GLabelMarker(
-                    text: widget.dataSeries?.description ?? '',
-                    anchorCoord: GPositionCoord.rational(x: 0.75, y: 0.5),
-                    alignment: Alignment.center,
-                    theme: theme.overlayMarkerTheme.copyWith(
-                      markerStyle: PaintStyle(),
-                      labelStyle: LabelStyle(
-                        textStyle: const TextStyle(
-                          color: Colors.black,
-                          fontSize: 14.0,
-                        ),
-                        backgroundStyle: PaintStyle(),
-                        backgroundPadding: const EdgeInsets.all(5),
-                        backgroundCornerRadius: 0,
-                        rotation: pi / 2,
-                      ),
-                    ),
                   ),
                 ],
               ),
@@ -110,7 +106,20 @@ class _VisState extends State<VisFinancialChart> with TickerProviderStateMixin {
                 ],
               ),
             ],
-            graphs: [GGraphGrids(), GGraphLine(valueKey: 'amount')],
+            graphs: [
+              GGraphGrids(),
+              GGraphLine(
+                valueKey: valueKey,
+                overlayMarkers: [
+                  GLabelMarker(
+                    text:
+                        '${widget.dataSeries?.description}\n$timeFrame  $changePercentString%',
+                    anchorCoord: GPositionCoord.absolute(x: 2, y: 2),
+                    alignment: Alignment.bottomRight,
+                  ),
+                ],
+              ),
+            ],
           ),
         ],
       ),

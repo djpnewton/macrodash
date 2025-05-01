@@ -50,8 +50,13 @@ Future<Response> onRequest(RequestContext context) async {
       sources = [SovData.usTreasurySource];
   }
 
+  final regionDescription = switch (region) {
+    DebtRegion.usa => 'USA',
+    DebtRegion.all => 'All Regions (USA)',
+  };
+
   final result = AmountSeries(
-    description: 'Trillions of Dollars',
+    description: 'Public Debt - $regionDescription - Trillions of Dollars',
     sources: sources,
     data: debtData,
   );

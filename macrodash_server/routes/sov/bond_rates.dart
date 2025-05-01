@@ -59,16 +59,16 @@ Future<Response> onRequest(RequestContext context) async {
       sources = [SovData.usTreasurySource];
   }
 
-  final description = switch (term) {
-    BondTerm.thirtyYear => '30-Year Treasury Rate',
-    BondTerm.twentyYear => '20-Year Treasury Rate',
-    BondTerm.tenYear => '10-Year Treasury Rate',
-    BondTerm.fiveYear => '5-Year Treasury Rate',
-    BondTerm.oneYear => '1-Year Treasury Rate',
+  final category = switch (term) {
+    BondTerm.thirtyYear => '30-Year Treasury',
+    BondTerm.twentyYear => '20-Year Treasury',
+    BondTerm.tenYear => '10-Year Treasury',
+    BondTerm.fiveYear => '5-Year Treasury',
+    BondTerm.oneYear => '1-Year Treasury',
   };
 
   final result = AmountSeries(
-    description: description,
+    description: 'Bond Rates - $category - Percent',
     sources: sources,
     data: data.data,
   );

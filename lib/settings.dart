@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 enum ChartLibrary { flChart, financialChart }
 
 class Settings {
-  static const String _chartLibraryKey = 'chartLibrary';
+  static const String _chartLibraryKey = 'chartLibrary_b2';
 
   static Future<SharedPreferences> getPrefs() async {
     return await SharedPreferences.getInstance();

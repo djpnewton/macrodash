@@ -112,6 +112,17 @@ final marketIndexAsiaLabels = {
   MarketIndexAsia.nifty50: 'Nifty 50',
 };
 
+enum Futures { gold, silver, crudeOil, brentCrude, naturalGas, copper }
+
+final futuresLabels = {
+  Futures.gold: 'Gold',
+  Futures.silver: 'Silver',
+  Futures.crudeOil: 'Crude Oil',
+  Futures.brentCrude: 'Brent Crude',
+  Futures.naturalGas: 'Natural Gas',
+  Futures.copper: 'Copper',
+};
+
 enum MarketCap { metals, crypto, stocks, all }
 
 final marketCapLabels = {

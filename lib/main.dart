@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'config.dart';
@@ -12,7 +13,7 @@ import 'about_page.dart';
 import 'package:macrodash_models/models.dart';
 
 final log = Logger('mainlogger');
-ChartLibrary chartLibrary = ChartLibrary.financialChart;
+SharedPreferences? _prefs;
 
 enum AppPage { m2, debt, bondRates, indexes, marketCap, settings, about }
 
@@ -28,6 +29,26 @@ void main() {
   runApp(const MyApp());
 }
 
+String? _chartSetting(
+  GoRouterState state,
+  String chartName,
+  String chartSetting,
+) {
+  final querySetting = state.uri.queryParameters[chartSetting];
+  if (querySetting != null) {
+    return querySetting;
+  }
+  // If the query parameter is not present, load the setting from shared preferences
+  assert(_prefs != null, 'SharedPreferences not initialized');
+  return Settings.loadChartSetting(_prefs!, chartName, chartSetting);
+}
+
+ChartLibrary _chartLibrary() {
+  // Load the chart library from shared preferences
+  assert(_prefs != null, 'SharedPreferences not initialized');
+  return Settings.loadChartLibrary(_prefs!);
+}
+
 final _router = GoRouter(
   routes: [
     GoRoute(
@@ -41,11 +62,11 @@ final _router = GoRouter(
           builder:
               (context, state) => AmountSeriesPage(
                 title: 'M2',
-                chartLibrary: chartLibrary,
-                region: state.uri.queryParameters['region'],
+                chartLibrary: _chartLibrary(),
+                region: _chartSetting(state, 'M2', 'region'),
                 regions: M2Region.values,
                 regionLabels: m2RegionLabels,
-                zoom: state.uri.queryParameters['zoom'],
+                zoom: _chartSetting(state, 'M2', 'zoom'),
               ),
         ),
         GoRoute(
@@ -54,11 +75,11 @@ final _router = GoRouter(
           builder:
               (context, state) => AmountSeriesPage(
                 title: 'Debt',
-                chartLibrary: chartLibrary,
-                region: state.uri.queryParameters['region'],
+                chartLibrary: _chartLibrary(),
+                region: _chartSetting(state, 'Debt', 'region'),
                 regions: DebtRegion.values,
                 regionLabels: debtRegionLabels,
-                zoom: state.uri.queryParameters['zoom'],
+                zoom: _chartSetting(state, 'Debt', 'zoom'),
               ),
         ),
         GoRoute(
@@ -67,15 +88,15 @@ final _router = GoRouter(
           builder:
               (context, state) => AmountSeriesPage(
                 title: 'Bond Rates',
-                chartLibrary: chartLibrary,
-                region: state.uri.queryParameters['region'],
+                chartLibrary: _chartLibrary(),
+                region: _chartSetting(state, 'Bond Rates', 'region'),
                 regions: BondRateRegion.values,
                 regionLabels: bondRateRegionLabels,
-                category: state.uri.queryParameters['category'],
+                category: _chartSetting(state, 'Bond Rates', 'category'),
                 categories: [BondTerm.values],
                 categoryLabels: [bondTermLabels],
                 categoryTitles: ['Term'],
-                zoom: state.uri.queryParameters['zoom'],
+                zoom: _chartSetting(state, 'Bond Rates', 'zoom'),
               ),
         ),
         GoRoute(
@@ -84,11 +105,11 @@ final _router = GoRouter(
           builder:
               (context, state) => AmountSeriesPage(
                 title: 'Indexes',
-                chartLibrary: chartLibrary,
-                region: state.uri.queryParameters['region'],
+                chartLibrary: _chartLibrary(),
+                region: _chartSetting(state, 'Indexes', 'region'),
                 regions: MarketIndexRegion.values,
                 regionLabels: marketIndexRegionLabels,
-                category: state.uri.queryParameters['category'],
+                category: _chartSetting(state, 'Indexes', 'category'),
                 categories: [
                   MarketIndexUsa.values,
                   MarketIndexEurope.values,
@@ -100,7 +121,7 @@ final _router = GoRouter(
                   marketIndexAsiaLabels,
                 ],
                 categoryTitles: ['Index', 'Index', 'Index'],
-                zoom: state.uri.queryParameters['zoom'],
+                zoom: _chartSetting(state, 'Indexes', 'zoom'),
               ),
         ),
         GoRoute(
@@ -109,7 +130,7 @@ final _router = GoRouter(
           builder:
               (context, state) => MarketCapPage(
                 title: 'Market Cap',
-                market: state.uri.queryParameters['market'],
+                market: _chartSetting(state, 'Market Cap', 'market'),
               ),
         ),
         GoRoute(
@@ -155,8 +176,8 @@ class _MyHomePageState extends State<MyHomePage> {
   void _navigateToPage(AppPage page) async {
     // close the drawer
     Navigator.pop(context);
-    // load the chart library setting
-    chartLibrary = await Settings.loadChartLibrary();
+    // load the shared preferences
+    _prefs = await SharedPreferences.getInstance();
     // navigate to the selected page
     if (mounted) {
       switch (page) {

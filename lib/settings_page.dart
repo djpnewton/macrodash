@@ -19,7 +19,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _loadChartLibrary() async {
-    final chartLibrary = await Settings.loadChartLibrary();
+    final chartLibrary = Settings.loadChartLibrary(await Settings.getPrefs());
     setState(() {
       _selectedChartLibrary = chartLibrary;
     });

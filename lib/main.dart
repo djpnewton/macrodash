@@ -15,7 +15,30 @@ import 'package:macrodash_models/models.dart';
 final log = Logger('mainlogger');
 SharedPreferences? _prefs;
 
-enum AppPage { m2, debt, bondRates, indexes, marketCap, settings, about }
+enum AppPage {
+  m2,
+  debt,
+  bondRates,
+  indices,
+  futures,
+  marketCap,
+  settings,
+  about,
+}
+
+const _pageTitles = {
+  AppPage.m2: 'M2',
+  AppPage.debt: 'Debt',
+  AppPage.bondRates: 'Bond Rates',
+  AppPage.indices: 'Indices',
+  AppPage.futures: 'Futures',
+  AppPage.marketCap: 'Market Cap',
+  AppPage.settings: 'Settings',
+  AppPage.about: 'About',
+};
+String _pageTitle(AppPage page) {
+  return _pageTitles[page] ?? 'Unknown';
+}
 
 void main() {
   Logger.root.level = Level.ALL; // defaults to Level.INFO
@@ -61,12 +84,12 @@ final _router = GoRouter(
           path: '/m2',
           builder:
               (context, state) => AmountSeriesPage(
-                title: 'M2',
+                title: _pageTitle(AppPage.m2),
                 chartLibrary: _chartLibrary(),
-                region: _chartSetting(state, 'M2', 'region'),
+                region: _chartSetting(state, _pageTitle(AppPage.m2), 'region'),
                 regions: M2Region.values,
                 regionLabels: m2RegionLabels,
-                zoom: _chartSetting(state, 'M2', 'zoom'),
+                zoom: _chartSetting(state, _pageTitle(AppPage.m2), 'zoom'),
               ),
         ),
         GoRoute(
@@ -74,12 +97,16 @@ final _router = GoRouter(
           path: '/debt',
           builder:
               (context, state) => AmountSeriesPage(
-                title: 'Debt',
+                title: _pageTitle(AppPage.debt),
                 chartLibrary: _chartLibrary(),
-                region: _chartSetting(state, 'Debt', 'region'),
+                region: _chartSetting(
+                  state,
+                  _pageTitle(AppPage.debt),
+                  'region',
+                ),
                 regions: DebtRegion.values,
                 regionLabels: debtRegionLabels,
-                zoom: _chartSetting(state, 'Debt', 'zoom'),
+                zoom: _chartSetting(state, _pageTitle(AppPage.debt), 'zoom'),
               ),
         ),
         GoRoute(
@@ -87,29 +114,49 @@ final _router = GoRouter(
           path: '/bondRates',
           builder:
               (context, state) => AmountSeriesPage(
-                title: 'Bond Rates',
+                title: _pageTitle(AppPage.bondRates),
                 chartLibrary: _chartLibrary(),
-                region: _chartSetting(state, 'Bond Rates', 'region'),
+                region: _chartSetting(
+                  state,
+                  _pageTitle(AppPage.bondRates),
+                  'region',
+                ),
                 regions: BondRateRegion.values,
                 regionLabels: bondRateRegionLabels,
-                category: _chartSetting(state, 'Bond Rates', 'category'),
+                category: _chartSetting(
+                  state,
+                  _pageTitle(AppPage.bondRates),
+                  'category',
+                ),
                 categories: [BondTerm.values],
                 categoryLabels: [bondTermLabels],
                 categoryTitles: ['Term'],
-                zoom: _chartSetting(state, 'Bond Rates', 'zoom'),
+                zoom: _chartSetting(
+                  state,
+                  _pageTitle(AppPage.bondRates),
+                  'zoom',
+                ),
               ),
         ),
         GoRoute(
-          name: AppPage.indexes.name,
-          path: '/indexes',
+          name: AppPage.indices.name,
+          path: '/indices',
           builder:
               (context, state) => AmountSeriesPage(
-                title: 'Indexes',
+                title: _pageTitle(AppPage.indices),
                 chartLibrary: _chartLibrary(),
-                region: _chartSetting(state, 'Indexes', 'region'),
+                region: _chartSetting(
+                  state,
+                  _pageTitle(AppPage.indices),
+                  'region',
+                ),
                 regions: MarketIndexRegion.values,
                 regionLabels: marketIndexRegionLabels,
-                category: _chartSetting(state, 'Indexes', 'category'),
+                category: _chartSetting(
+                  state,
+                  _pageTitle(AppPage.indices),
+                  'category',
+                ),
                 categories: [
                   MarketIndexUsa.values,
                   MarketIndexEurope.values,
@@ -121,7 +168,24 @@ final _router = GoRouter(
                   marketIndexAsiaLabels,
                 ],
                 categoryTitles: ['Index', 'Index', 'Index'],
-                zoom: _chartSetting(state, 'Indexes', 'zoom'),
+                zoom: _chartSetting(state, _pageTitle(AppPage.indices), 'zoom'),
+              ),
+        ),
+        GoRoute(
+          name: AppPage.futures.name,
+          path: '/futures',
+          builder:
+              (context, state) => AmountSeriesPage(
+                title: _pageTitle(AppPage.futures),
+                chartLibrary: _chartLibrary(),
+                region: _chartSetting(
+                  state,
+                  _pageTitle(AppPage.futures),
+                  'region',
+                ),
+                regions: Futures.values,
+                regionLabels: futuresLabels,
+                zoom: _chartSetting(state, _pageTitle(AppPage.futures), 'zoom'),
               ),
         ),
         GoRoute(
@@ -129,8 +193,12 @@ final _router = GoRouter(
           path: '/marketCap',
           builder:
               (context, state) => MarketCapPage(
-                title: 'Market Cap',
-                market: _chartSetting(state, 'Market Cap', 'market'),
+                title: _pageTitle(AppPage.marketCap),
+                market: _chartSetting(
+                  state,
+                  _pageTitle(AppPage.marketCap),
+                  'market',
+                ),
               ),
         ),
         GoRoute(
@@ -190,9 +258,13 @@ class _MyHomePageState extends State<MyHomePage> {
         case AppPage.bondRates:
           log.info('Navigating to Bond Rates');
           context.goNamed(AppPage.bondRates.name);
-        case AppPage.indexes:
-          log.info('Navigating to Indexes');
-          context.goNamed(AppPage.indexes.name);
+        case AppPage.indices:
+          log.info('Navigating to Indices');
+          context.goNamed(AppPage.indices.name);
+        case AppPage.futures:
+          log.info('Navigating to Futures');
+          context.goNamed(AppPage.futures.name);
+          break;
         case AppPage.marketCap:
           log.info('Navigating to Market Cap');
           context.goNamed(AppPage.marketCap.name);
@@ -272,8 +344,13 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             ListTile(
               leading: const Icon(Icons.bar_chart),
-              title: const Text('Indexes'),
-              onTap: () => _navigateToPage(AppPage.indexes),
+              title: const Text('Indices'),
+              onTap: () => _navigateToPage(AppPage.indices),
+            ),
+            ListTile(
+              leading: const Icon(Icons.show_chart),
+              title: const Text('Futures'),
+              onTap: () => _navigateToPage(AppPage.futures),
             ),
             ListTile(
               leading: const Icon(Icons.pie_chart),

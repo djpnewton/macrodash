@@ -4,7 +4,7 @@ import 'package:macrodash_models/models.dart';
 
 import '_middleware.dart';
 
-final _log = Logger('market_indexes');
+final _log = Logger('market_indices');
 
 Future<Response> onRequest(RequestContext context) async {
   final dataDownloader = context.read<MarketData>();

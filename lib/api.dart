@@ -151,6 +151,29 @@ class ServerApi {
     }
   }
 
+  /// Fetches and parses the futures data into an AmountSeries object.
+  Future<Result<AmountSeries>> futuresData(
+    Futures future,
+    DataRange range,
+  ) async {
+    const url = '$macrodashServerUrl/market/futures';
+    final queryParameters = {'future': future.name, 'range': range.name};
+    final result = await downloadFile(url, queryParameters);
+    switch (result) {
+      case Ok():
+        log.info('Futures data downloaded successfully from $url');
+        final futuresJson = jsonDecode(result.value);
+        if (futuresJson == null) {
+          log.severe('Failed to parse futures data from $url');
+          return Result.error(Exception('Failed to parse futures data'));
+        }
+        return Result.ok(AmountSeries.fromJson(futuresJson));
+      case Error():
+        log.severe('Failed to download futures data from $url');
+        return Result.error(Exception(result.error));
+    }
+  }
+
   /// Generic function to fetch AmountSeries based on the enum type.
   Future<Result<AmountSeries>> fetchAmountSeries<
     T extends Enum,
@@ -180,6 +203,8 @@ class ServerApi {
         );
       }
       return await marketIndexData(region, category, range);
+    } else if (region is Futures) {
+      return await futuresData(region, range);
     } else {
       log.severe('Unsupported region type: ${region.runtimeType}');
       return Result.error(

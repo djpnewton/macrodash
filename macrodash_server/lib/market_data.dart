@@ -29,6 +29,48 @@ class MarketData extends AbstractDownloader {
 
   final Logger _log = Logger('MarketData');
 
+  Future<List<AmountEntry>?> _yahooData(String ticker, DataRange range) async {
+    // convert the range enum to a string
+    final rangeStr = switch (range) {
+      DataRange.oneDay => '1d',
+      DataRange.fiveDays => '5d',
+      DataRange.oneMonth => '1mo',
+      DataRange.threeMonths => '3mo',
+      DataRange.sixMonths => '6mo',
+      DataRange.oneYear => '1y',
+      DataRange.twoYears => '2y',
+      DataRange.fiveYears => '5y',
+      DataRange.tenYears => '10y',
+      DataRange.max => 'max',
+    };
+    // Fetch the data from Yahoo Finance
+    final url = 'https://query2.finance.yahoo.com/v8/finance/chart/$ticker';
+    final data = await downloadFile(url, {'interval': '1d', 'range': rangeStr});
+    if (data == null) {
+      _log.warning('Failed to download data for ticker: $ticker');
+      return null;
+    }
+    // Parse the data into a list of AmountEntry objects
+    final parsedData = jsonDecode(data) as Map<String, dynamic>;
+    final entries = <AmountEntry>[];
+    final timestamps =
+        // ignore: avoid_dynamic_calls
+        parsedData['chart']['result'][0]['timestamp'] as List<dynamic>;
+    // ignore: avoid_dynamic_calls
+    final closePrices = parsedData['chart']['result'][0]['indicators']['quote']
+        [0]['close'] as List<dynamic>;
+    for (var i = 0; i < timestamps.length; i++) {
+      final timestamp = timestamps[i] as int;
+      final closePrice = closePrices[i] as double?;
+      if (closePrice == null) {
+        continue; // Skip if close price is null
+      }
+      final date = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
+      entries.add(AmountEntry(date: date, amount: closePrice));
+    }
+    return entries;
+  }
+
   /// Fetches and parses the Index data into a list of AmountEntry objects.
   Future<List<AmountEntry>?> indexData(
     Enum index,
@@ -81,45 +123,24 @@ class MarketData extends AbstractDownloader {
       _log.severe('Unknown index type: $index');
       return null;
     }
-    // convert the range enum to a string
-    final rangeStr = switch (range) {
-      DataRange.oneDay => '1d',
-      DataRange.fiveDays => '5d',
-      DataRange.oneMonth => '1mo',
-      DataRange.threeMonths => '3mo',
-      DataRange.sixMonths => '6mo',
-      DataRange.oneYear => '1y',
-      DataRange.twoYears => '2y',
-      DataRange.fiveYears => '5y',
-      DataRange.tenYears => '10y',
-      DataRange.max => 'max',
+    return _yahooData(ticker, range);
+  }
+
+  /// Fetches and parses the Future data into a list of AmountEntry objects.
+  Future<List<AmountEntry>?> futureData(
+    Futures future,
+    DataRange range,
+  ) async {
+    // convert future enum to yahoo finance ticker
+    final ticker = switch (future) {
+      Futures.gold => 'GC=F',
+      Futures.silver => 'SI=F',
+      Futures.crudeOil => 'CL=F',
+      Futures.brentCrude => 'BZ=F',
+      Futures.naturalGas => 'NG=F',
+      Futures.copper => 'HG=F',
     };
-    // Fetch the data from Yahoo Finance
-    final url = 'https://query2.finance.yahoo.com/v8/finance/chart/$ticker';
-    final data = await downloadFile(url, {'interval': '1d', 'range': rangeStr});
-    if (data == null) {
-      _log.warning('Failed to download data for ticker: $ticker');
-      return null;
-    }
-    // Parse the data into a list of AmountEntry objects
-    final parsedData = jsonDecode(data) as Map<String, dynamic>;
-    final entries = <AmountEntry>[];
-    final timestamps =
-        // ignore: avoid_dynamic_calls
-        parsedData['chart']['result'][0]['timestamp'] as List<dynamic>;
-    // ignore: avoid_dynamic_calls
-    final closePrices = parsedData['chart']['result'][0]['indicators']['quote']
-        [0]['close'] as List<dynamic>;
-    for (var i = 0; i < timestamps.length; i++) {
-      final timestamp = timestamps[i] as int;
-      final closePrice = closePrices[i] as double?;
-      if (closePrice == null) {
-        continue; // Skip if close price is null
-      }
-      final date = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
-      entries.add(AmountEntry(date: date, amount: closePrice));
-    }
-    return entries;
+    return _yahooData(ticker, range);
   }
 
   YahooSparklineData _parseSparklineData(
@@ -310,6 +331,7 @@ class MarketData extends AbstractDownloader {
             // ignore: avoid_dynamic_calls
             image: e['image'] as String,
             type: MarketCap.crypto,
+            // ignore: avoid_dynamic_calls
             moreInfoLink: 'https://www.coingecko.com/en/coins/${e['id']}',
           ),
         )
@@ -525,17 +547,18 @@ class MarketData extends AbstractDownloader {
       // create the market cap entry
       entries.add(
         MarketCapEntry(
-            supply: 0,
-            price: price,
-            high24h: 0,
-            low24h: 0,
-            priceChangePercent24h: priceChange,
-            marketCap: marketCap,
-            ticker: ticker,
-            name: name,
-            image: '$serverUrl/images/logos_stock/${ticker.toUpperCase()}.svg',
-            type: MarketCap.stocks,
-            moreInfoLink: moreInfoLink),
+          supply: 0,
+          price: price,
+          high24h: 0,
+          low24h: 0,
+          priceChangePercent24h: priceChange,
+          marketCap: marketCap,
+          ticker: ticker,
+          name: name,
+          image: '$serverUrl/images/logos_stock/${ticker.toUpperCase()}.svg',
+          type: MarketCap.stocks,
+          moreInfoLink: moreInfoLink,
+        ),
       );
     }
     return entries;

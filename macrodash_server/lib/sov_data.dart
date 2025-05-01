@@ -7,7 +7,6 @@ import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
 import 'package:macrodash_models/models.dart';
 import 'package:macrodash_server/abstract_downloader.dart';
-import 'package:quiver/time.dart';
 
 /// Wrap AmountSeries with a bond term
 class BondRateData {
@@ -259,21 +258,7 @@ class SovData extends AbstractDownloader {
         final i = int.parse(entry.key);
         // ignore: avoid_dynamic_calls
         final dateStart = seriesDates[i]['start'] as String;
-        var date = DateTime.parse(dateStart);
-        // TODO(djpnewton): we should be able to get rid of this once the client
-        // has better handling of dates in its grids etc.
-        // Adjust the date if it is the last hour of the last day of the month
-        if (date.hour >= 22 && date.day == daysInMonth(date.year, date.month)) {
-          var newYear = date.year;
-          var newMonth = date.month + 1;
-          if (date.month > 12) {
-            newYear++;
-            newMonth = 1;
-          }
-          date = DateTime(newYear, newMonth);
-        } else {
-          _log.warning('date not converted to first day of the month: $date');
-        }
+        final date = DateTime.parse(dateStart);
         // ignore: avoid_dynamic_calls
         final amount = entry.value[0] as num;
         return AmountEntry(

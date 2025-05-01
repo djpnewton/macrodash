@@ -47,22 +47,33 @@ Future<Response> onRequest(RequestContext context) async {
       final japData = await dataDownloader.japM2Data();
 
       if (usaData != null && ecbData != null && japData != null) {
-        // Combine data by matching dates and summing amounts
-        final usdMap = {for (final entry in usaData) entry.date: entry.amount};
-        final japMap = {for (final entry in japData) entry.date: entry.amount};
-        final combinedData = ecbData
-            .where(
-          (entry) =>
-              usdMap.containsKey(entry.date) && japMap.containsKey(entry.date),
-        )
-            .map((entry) {
-          final combinedAmount = entry.amount +
-              (usdMap[entry.date] ?? 0.0) +
-              (japMap[entry.date] ?? 0.0);
-          return AmountEntry(date: entry.date, amount: combinedAmount);
+        // for each USA date find a date in ECB and Japan that is within 1 week
+        // of the USA date and use that date for the combined data
+        final combinedData = usaData.map((usaEntry) {
+          final date = usaEntry.date;
+          final ecbEntry = ecbData.firstWhere(
+            (entry) =>
+                entry.date.isAfter(date.subtract(const Duration(days: 7))) &&
+                entry.date.isBefore(date.add(const Duration(days: 7))),
+            orElse: () => AmountEntry(date: date, amount: 0),
+          );
+          final japEntry = japData.firstWhere(
+            (entry) =>
+                entry.date.isAfter(date.subtract(const Duration(days: 7))) &&
+                entry.date.isBefore(date.add(const Duration(days: 7))),
+            orElse: () => AmountEntry(date: date, amount: 0),
+          );
+          if (ecbEntry.amount != 0 && japEntry.amount != 0) {
+            return AmountEntry(
+              date: date,
+              amount: usaEntry.amount + ecbEntry.amount + japEntry.amount,
+            );
+          } else {
+            return null;
+          }
         }).toList();
-
-        m2Data = combinedData;
+        // Filter out null entries
+        m2Data = combinedData.whereType<AmountEntry>().toList();
       } else {
         m2Data = null;
       }

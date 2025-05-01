@@ -93,6 +93,12 @@ class _VisState extends State<VisFinancialChart> with TickerProviderStateMixin {
                   ),
                 ],
               ),
+              ...?widget.dataSeries?.sources.map(
+                (source) => Text(
+                  source,
+                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                ),
+              ),
             ],
           ),
         ),

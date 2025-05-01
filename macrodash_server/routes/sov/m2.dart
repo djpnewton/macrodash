@@ -86,8 +86,15 @@ Future<Response> onRequest(RequestContext context) async {
       ];
   }
 
+  final regionDescription = switch (region) {
+    M2Region.japan => 'Japan',
+    M2Region.euro => 'Eurozone',
+    M2Region.usa => 'USA',
+    M2Region.all => 'All Regions (USA, Eurozone, Japan)',
+  };
+
   final result = AmountSeries(
-    description: 'Trillions of Dollars',
+    description: 'M2 - $regionDescription - Trillions of Dollars',
     sources: sources,
     data: m2Data,
   );

@@ -95,18 +95,27 @@ class ZoomButtons extends StatelessWidget {
   final bool popout;
 
   static const _ranges = [
+    DataRange.oneMonth,
+    DataRange.threeMonths,
+    DataRange.sixMonths,
     DataRange.oneYear,
     DataRange.fiveYears,
     DataRange.tenYears,
     DataRange.max,
   ];
-  static const _labels = {
+  static const labels = {
+    DataRange.oneMonth: '1M',
+    DataRange.threeMonths: '3M',
+    DataRange.sixMonths: '6M',
     DataRange.oneYear: '1Y',
     DataRange.fiveYears: '5Y',
     DataRange.tenYears: '10Y',
     DataRange.max: 'Max',
   };
   static const _labelsLong = {
+    DataRange.oneMonth: '1 Month',
+    DataRange.threeMonths: '3 Months',
+    DataRange.sixMonths: '6 Months',
     DataRange.oneYear: '1 Year',
     DataRange.fiveYears: '5 Years',
     DataRange.tenYears: '10 Years',
@@ -137,7 +146,7 @@ class ZoomButtons extends StatelessWidget {
       selectedOption: selectedZoom,
       values: _ranges,
       onOptionSelected: (value) => onZoomSelected(value),
-      labels: _labels,
+      labels: labels,
       popout: false,
     );
   }

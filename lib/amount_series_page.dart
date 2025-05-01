@@ -152,14 +152,23 @@ class _AmountSeriesPageState<T extends Enum, C extends Enum>
         // Show all data (Max)
         _filteredData = _amountSeries!.data;
       } else {
-        final years =
-            {
-              DataRange.oneYear: 1,
-              DataRange.fiveYears: 5,
-              DataRange.tenYears: 10,
-            }[zoomLevel]!;
-
-        final cutoffDate = DateTime.now().subtract(Duration(days: years * 365));
+        final years = switch (zoomLevel) {
+          DataRange.oneDay => 1 / 365,
+          DataRange.fiveDays => 5 / 365,
+          DataRange.oneMonth => 1 / 12,
+          DataRange.threeMonths => 3 / 12,
+          DataRange.sixMonths => 6 / 12,
+          DataRange.oneYear => 1,
+          DataRange.twoYears => 2,
+          DataRange.fiveYears => 5,
+          DataRange.tenYears => 10,
+          DataRange.max => throw Exception('Invalid zoom level'),
+        };
+        // Calculate the cutoff date based on the selected zoom level
+        // and filter the data accordingly
+        final cutoffDate = DateTime.now().subtract(
+          Duration(days: (years * 365).toInt()),
+        );
         _filteredData =
             _amountSeries!.data
                 .where((entry) => entry.date.isAfter(cutoffDate))

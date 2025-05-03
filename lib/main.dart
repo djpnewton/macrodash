@@ -40,7 +40,7 @@ String _pageTitle(AppPage page) {
   return _pageTitles[page] ?? 'Unknown';
 }
 
-void main() {
+void main() async {
   Logger.root.level = Level.ALL; // defaults to Level.INFO
   Logger.root.onRecord.listen((record) {
     debugPrint('${record.level.name}: ${record.time}: ${record.message}');
@@ -49,6 +49,9 @@ void main() {
   log.info('build GIT SHA: $gitSha');
   log.info('build date: $buildDate');
 
+  WidgetsFlutterBinding.ensureInitialized();
+  _prefs = await SharedPreferences.getInstance();
+  log.info('SharedPreferences initialized');
   runApp(const MyApp());
 }
 

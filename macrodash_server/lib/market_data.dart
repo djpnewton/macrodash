@@ -316,12 +316,12 @@ class MarketData extends AbstractDownloader {
                 .map((e) => e as double)
                 .toList(),
             // ignore: avoid_dynamic_calls
-            high24h: (e['high_24h'] as num).toDouble(),
+            high24h: (e['high_24h'] as num?)?.toDouble() ?? 0,
             // ignore: avoid_dynamic_calls
-            low24h: (e['low_24h'] as num).toDouble(),
+            low24h: (e['low_24h'] as num?)?.toDouble() ?? 0,
             priceChangePercent24h:
                 // ignore: avoid_dynamic_calls
-                (e['price_change_percentage_24h'] as num).toDouble(),
+                (e['price_change_percentage_24h'] as num?)?.toDouble() ?? 0,
             // ignore: avoid_dynamic_calls
             marketCap: (e['market_cap'] as num).toDouble(),
             // ignore: avoid_dynamic_calls

@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:macrodash_models/models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 enum ChartLibrary { flChart, financialChart }
@@ -46,5 +49,28 @@ class Settings {
   ) {
     final key = '${chartName}_$chartSetting';
     return prefs.getString(key);
+  }
+
+  /// Saves the DashTickers setting to shared preferences.
+  static Future<void> saveDashTickers(DashTickers tickers) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('dash_tickers', jsonEncode(tickers.toJson()));
+  }
+
+  /// Loads the DashTickers setting from shared preferences.
+  /// Returns default tickers if no value is stored.
+  static DashTickers loadDashTickers(SharedPreferences prefs) {
+    final value = prefs.getString('dash_tickers');
+    if (value == null) {
+      return const DashTickers(
+        tickers: [
+          DashTicker(ticker1: 'TSLA', ticker2: null),
+          DashTicker(ticker1: 'BTC=F', ticker2: null),
+          DashTicker(ticker1: 'GC=F', ticker2: null),
+          DashTicker(ticker1: 'BTC=F', ticker2: 'GC=F'),
+        ],
+      );
+    }
+    return DashTickers.fromJson(jsonDecode(value));
   }
 }

@@ -4,13 +4,15 @@ import 'package:logging/logging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:macrodash_models/models.dart';
+
 import 'config.dart';
 import 'settings.dart';
 import 'amount_series_page.dart';
 import 'market_cap_page.dart';
 import 'settings_page.dart';
 import 'about_page.dart';
-import 'package:macrodash_models/models.dart';
+import 'dash.dart';
 
 final log = Logger('mainlogger');
 SharedPreferences? _prefs;
@@ -391,23 +393,7 @@ class _MyHomePageState extends State<MyHomePage> {
           ],
         ),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Text(
-              'Welcome to MacroDash!',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 20),
-            Text(
-              'Hoping to create a macro dashboard to simplify your workflow!',
-              style: TextStyle(fontSize: 16),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
+      body: DashPanel(),
     );
   }
 }

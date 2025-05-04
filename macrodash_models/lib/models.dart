@@ -123,13 +123,13 @@ final futuresLabels = {
   Futures.copper: 'Copper',
 };
 
-enum MarketCap { metals, crypto, stocks, all }
+enum MarketCategory { metals, crypto, stocks, all }
 
-final marketCapLabels = {
-  MarketCap.metals: 'Metals',
-  MarketCap.crypto: 'Crypto',
-  MarketCap.stocks: 'Stocks',
-  MarketCap.all: 'All',
+final marketCategoryLabels = {
+  MarketCategory.metals: 'Metals',
+  MarketCategory.crypto: 'Crypto',
+  MarketCategory.stocks: 'Stocks',
+  MarketCategory.all: 'All',
 };
 
 /// Represents a single entry in price/amount series.
@@ -183,7 +183,7 @@ class AmountSeries extends Equatable {
 }
 
 @JsonSerializable()
-class MarketCapEntry extends Equatable {
+class MarketOverviewEntry extends Equatable {
   final double supply;
   final double price;
   final List<num?>? sparkline;
@@ -195,10 +195,10 @@ class MarketCapEntry extends Equatable {
   final String ticker;
   final String name;
   final String? image;
-  final MarketCap type;
+  final MarketCategory type;
   final String? moreInfoLink;
 
-  const MarketCapEntry({
+  const MarketOverviewEntry({
     required this.supply,
     required this.price,
     this.sparkline,
@@ -214,12 +214,12 @@ class MarketCapEntry extends Equatable {
     required this.moreInfoLink,
   });
 
-  /// Creates an instance of [MarketCapEntry] from a JSON map.
-  factory MarketCapEntry.fromJson(Map<String, dynamic> json) =>
-      _$MarketCapEntryFromJson(json);
+  /// Creates an instance of [MarketOverviewEntry] from a JSON map.
+  factory MarketOverviewEntry.fromJson(Map<String, dynamic> json) =>
+      _$MarketOverviewEntryFromJson(json);
 
-  /// Converts the instance of [MarketCapEntry] to a JSON map.
-  Map<String, dynamic> toJson() => _$MarketCapEntryToJson(this);
+  /// Converts the instance of [MarketOverviewEntry] to a JSON map.
+  Map<String, dynamic> toJson() => _$MarketOverviewEntryToJson(this);
 
   @override
   List<Object?> get props => [
@@ -240,14 +240,14 @@ class MarketCapEntry extends Equatable {
 
   @override
   String toString() =>
-      'MarketCapEntry(supply: $supply, price: $price, marketCap: $marketCap, ticker: $ticker, name: $name, type: $type)';
+      'MarketOverviewEntry(supply: $supply, price: $price, marketCap: $marketCap, ticker: $ticker, name: $name, type: $type)';
 }
 
 @JsonSerializable()
 class MarketCapSeries extends Equatable {
   final String description;
   final List<String> sources;
-  final List<MarketCapEntry> data;
+  final List<MarketOverviewEntry> data;
 
   const MarketCapSeries({
     required this.description,
@@ -293,4 +293,126 @@ class YahooSparklineData extends Equatable {
   @override
   String toString() =>
       'YahooSparklineData(sparkline: $sparkline, sparklineTimestamps: $sparklineTimestamps)';
+}
+
+@JsonSerializable()
+class TickerSearchEntry extends Equatable {
+  final String ticker;
+  final String name;
+  final String exchange;
+
+  const TickerSearchEntry({
+    required this.ticker,
+    required this.name,
+    required this.exchange,
+  });
+
+  /// Creates an instance of [TickerSearchEntry] from a JSON map.
+  factory TickerSearchEntry.fromJson(Map<String, dynamic> json) =>
+      _$TickerSearchEntryFromJson(json);
+
+  /// Converts the instance of [TickerSearchEntry] to a JSON map.
+  Map<String, dynamic> toJson() => _$TickerSearchEntryToJson(this);
+
+  @override
+  List<Object?> get props => [ticker, name, exchange];
+
+  @override
+  String toString() =>
+      'TickerSearchEntry(ticker: $ticker, name: $name, exchange: $exchange)';
+}
+
+@JsonSerializable()
+class TickerSearchResult extends Equatable {
+  final List<TickerSearchEntry> data;
+
+  const TickerSearchResult({required this.data});
+
+  /// Creates an instance of [TickerSearchResult] from a JSON map.
+  factory TickerSearchResult.fromJson(Map<String, dynamic> json) =>
+      _$TickerSearchResultFromJson(json);
+
+  /// Converts the instance of [TickerSearchResult] to a JSON map.
+  Map<String, dynamic> toJson() => _$TickerSearchResultToJson(this);
+
+  @override
+  List<Object?> get props => [data];
+
+  @override
+  String toString() => 'TickerSearchResult(data: $data)';
+}
+
+@JsonSerializable()
+class CustomTickerResult extends Equatable {
+  final String ticker1;
+  final String? ticker2;
+  final String description;
+  final List<String> sources;
+  final List<AmountEntry> data;
+  final String currency;
+
+  const CustomTickerResult({
+    required this.ticker1,
+    required this.ticker2,
+    required this.description,
+    required this.sources,
+    required this.data,
+    required this.currency,
+  });
+
+  /// Creates an instance of [CustomTickerResult] from a JSON map.
+  factory CustomTickerResult.fromJson(Map<String, dynamic> json) =>
+      _$CustomTickerResultFromJson(json);
+
+  /// Converts the instance of [CustomTickerResult] to a JSON map.
+  Map<String, dynamic> toJson() => _$CustomTickerResultToJson(this);
+
+  @override
+  List<Object?> get props => [
+    ticker1,
+    ticker2,
+    description,
+    sources,
+    data,
+    currency,
+  ];
+
+  @override
+  String toString() =>
+      'CustomTickerResult(ticker1: $ticker1, ticker2: $ticker2, description: $description, sources: $sources, data: $data)';
+}
+
+@JsonSerializable()
+class DashTicker extends Equatable {
+  final String ticker1;
+  final String? ticker2;
+
+  const DashTicker({required this.ticker1, required this.ticker2});
+
+  /// Creates an instance of [DashTicker] from a JSON map.
+  factory DashTicker.fromJson(Map<String, dynamic> json) =>
+      _$DashTickerFromJson(json);
+
+  /// Converts the instance of [DashTicker] to a JSON map.
+  Map<String, dynamic> toJson() => _$DashTickerToJson(this);
+
+  @override
+  List<Object?> get props => [ticker1, ticker2];
+}
+
+@JsonSerializable()
+class DashTickers extends Equatable {
+  final List<DashTicker> tickers;
+
+  const DashTickers({required this.tickers});
+
+  /// Creates an instance of [DashTickers] from a JSON map.
+  factory DashTickers.fromJson(Map<String, dynamic> json) =>
+      _$DashTickersFromJson(json);
+
+  /// Converts the instance of [DashTickers] to a JSON map.
+  Map<String, dynamic> toJson() => _$DashTickersToJson(this);
+
+  @override
+  List<Object?> get props => [tickers];
 }

@@ -214,7 +214,9 @@ class ServerApi {
   }
 
   /// Fetches and parses the market cap data into a MarketCapSeries object.
-  Future<Result<MarketCapSeries>> fetchMarketCapSeries(MarketCap type) async {
+  Future<Result<MarketCapSeries>> fetchMarketCapSeries(
+    MarketCategory type,
+  ) async {
     const url = '$macrodashServerUrl/market/cap';
     final queryParameters = {'type': type.name};
     final result = await downloadFile(url, queryParameters);
@@ -251,6 +253,33 @@ class ServerApi {
         return Result.ok(YahooSparklineData.fromJson(sparklineJson));
       case Error():
         log.severe('Failed to download Yahoo sparkline data from $url');
+        return Result.error(Exception(result.error));
+    }
+  }
+
+  /// Fetches and parses a custom ticker into a CustomTickerResult object.
+  Future<Result<CustomTickerResult>> fetchCustomTicker(
+    DashTicker dashTicker,
+    DataRange range,
+  ) async {
+    const url = '$macrodashServerUrl/market/custom';
+    final queryParameters = {
+      'ticker1': dashTicker.ticker1,
+      'ticker2': dashTicker.ticker2,
+      'range': range.name,
+    };
+    final result = await downloadFile(url, queryParameters);
+    switch (result) {
+      case Ok():
+        log.info('Custom ticker data downloaded successfully from $url');
+        final customTickerJson = jsonDecode(result.value);
+        if (customTickerJson == null) {
+          log.severe('Failed to parse custom ticker data from $url');
+          return Result.error(Exception('Failed to parse custom ticker data'));
+        }
+        return Result.ok(CustomTickerResult.fromJson(customTickerJson));
+      case Error():
+        log.severe('Failed to download custom ticker data from $url');
         return Result.error(Exception(result.error));
     }
   }

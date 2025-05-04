@@ -31,7 +31,7 @@ class _MarketCapPageState extends State<MarketCapPage> {
   final ServerApi _api = ServerApi();
   MarketCapSeries? _marketCapSeries;
   bool _isLoading = true;
-  late MarketCap _selectedMarket;
+  late MarketCategory _selectedMarket;
   Map<String, SparklineStatus> _sparklineStatus = {};
   Map<String, YahooSparklineData> _sparklineData = {};
 
@@ -41,11 +41,11 @@ class _MarketCapPageState extends State<MarketCapPage> {
     // Initialize with the default market
     _selectedMarket =
         widget.market != null
-            ? MarketCap.values.firstWhere(
+            ? MarketCategory.values.firstWhere(
               (market) => market.name == widget.market,
-              orElse: () => MarketCap.all,
+              orElse: () => MarketCategory.all,
             )
-            : MarketCap.all;
+            : MarketCategory.all;
     _fetchData();
   }
 
@@ -76,7 +76,7 @@ class _MarketCapPageState extends State<MarketCapPage> {
     });
   }
 
-  void _marketSelect(MarketCap market) {
+  void _marketSelect(MarketCategory market) {
     Settings.saveChartSetting(widget.title, 'market', market.name);
     setState(() {
       _selectedMarket = market;
@@ -377,12 +377,12 @@ class _MarketCapPageState extends State<MarketCapPage> {
       uri: GoRouterState.of(context).uri,
       queryParams: {'market': _selectedMarket.name},
     );
-    final categoryButtons = OptionButtons<MarketCap>(
+    final categoryButtons = OptionButtons<MarketCategory>(
       popoutTitle: 'Category',
       selectedOption: _selectedMarket,
-      values: MarketCap.values,
+      values: MarketCategory.values,
       onOptionSelected: _marketSelect,
-      labels: marketCapLabels,
+      labels: marketCategoryLabels,
       popout: popouts,
     );
     final Widget options = switch (optionsSide) {

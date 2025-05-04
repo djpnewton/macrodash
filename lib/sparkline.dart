@@ -15,14 +15,23 @@ class SparkPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    /*
+    // draw outline of box
+    final outlinePaint =
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1
+          ..color = Colors.grey.withOpacity(0.2);
+    canvas.drawRect(Rect.fromLTRB(0, 0, size.width, size.height), outlinePaint);
+    */
     // set colors
     var firstValue = values.firstWhere(
       (element) => element != null,
-      orElse: () => 0,
+      orElse: () => 0.0,
     );
     var lastValue = values.lastWhere(
       (element) => element != null,
-      orElse: () => 0,
+      orElse: () => 0.0,
     );
     var color = firstValue! < lastValue! ? colorUp : colorDown;
 

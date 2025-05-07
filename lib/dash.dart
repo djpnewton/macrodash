@@ -4,11 +4,147 @@ import 'package:logging/logging.dart';
 
 import 'settings.dart';
 import 'sparkline.dart';
+import 'fixed_height_grid_delegate.dart';
+import 'ticker_search.dart';
 import 'api.dart';
 import 'result.dart';
-import 'fixed_height_grid_delegate.dart';
 
 final _log = Logger('DashPanel');
+
+class TickerSelection {
+  final String label;
+  final String value;
+  const TickerSelection({required this.label, required this.value});
+}
+
+class TickerConfig extends StatefulWidget {
+  final DashTicker ticker;
+  final ValueSetter<DashTicker>? onSave;
+  final bool add;
+
+  const TickerConfig({
+    super.key,
+    required this.ticker,
+    this.onSave,
+    this.add = false,
+  });
+
+  @override
+  State<TickerConfig> createState() => _TickerConfigState();
+}
+
+class _TickerConfigState extends State<TickerConfig> {
+  late DashTicker _ticker;
+
+  final controller1 = TextEditingController();
+  final controller2 = TextEditingController();
+  final SearchController searchController1 = SearchController();
+  final SearchController searchController2 = SearchController();
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = widget.ticker;
+    controller1.text = _ticker.ticker1;
+    controller2.text = _ticker.ticker2 ?? '';
+    searchController1.text = _ticker.ticker1;
+    searchController2.text = _ticker.ticker2 ?? '';
+    controller1.addListener(_updateTicker);
+    controller2.addListener(_updateTicker);
+    searchController1.addListener(_updateTicker);
+    searchController2.addListener(_updateTicker);
+  }
+
+  @override
+  void dispose() {
+    controller1.dispose();
+    controller2.dispose();
+    searchController1.dispose();
+    searchController2.dispose();
+    super.dispose();
+  }
+
+  void _updateTicker() {
+    controller1.text = searchController1.text;
+    controller2.text = searchController2.text;
+    setState(() {
+      _ticker = DashTicker(
+        ticker1: controller1.text,
+        ticker2: controller2.text,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.add ? 'Configure Ticker' : 'Add Ticker'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextFormField(
+            controller: controller1,
+            readOnly: true,
+            decoration: InputDecoration(
+              labelText: 'Ticker 1',
+              suffixIcon: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AsyncSearchAnchor(controller: searchController1),
+                  IconButton(
+                    onPressed: () => searchController1.clear(),
+                    icon: Icon(Icons.clear),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: controller2,
+            readOnly: true,
+            decoration: InputDecoration(
+              labelText: 'Ticker 2 (Optional comparison ticker)',
+              suffixIcon: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AsyncSearchAnchor(controller: searchController2),
+                  IconButton(
+                    onPressed: () => searchController2.clear(),
+                    icon: Icon(Icons.clear),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () {
+            if (controller1.text.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Please enter a ticker')),
+              );
+              return;
+            }
+            Navigator.of(context).pop();
+            if (widget.onSave != null) {
+              widget.onSave!(_ticker);
+            }
+          },
+          child: Text('Save'),
+        ),
+      ],
+    );
+  }
+}
 
 enum DashState { loading, error, loaded }
 
@@ -179,21 +315,21 @@ class _DashCardState extends State<DashCard> {
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Remove button
-                IconButton(
-                  icon: const Icon(Icons.remove_circle, size: 12),
-                  tooltip: 'Remove',
-                  onPressed: widget.onRemove,
-                  // make it smaller
-                  padding: const EdgeInsets.all(2),
-                  constraints: const BoxConstraints(),
-                ),
-                const SizedBox(height: 4),
                 // Config button
                 IconButton(
                   icon: const Icon(Icons.settings, size: 12),
                   tooltip: 'Configure',
                   onPressed: widget.onConfig,
+                  // make it smaller
+                  padding: const EdgeInsets.all(2),
+                  constraints: const BoxConstraints(),
+                ),
+                const SizedBox(height: 4),
+                // Remove button
+                IconButton(
+                  icon: const Icon(Icons.remove_circle, size: 12),
+                  tooltip: 'Remove',
+                  onPressed: widget.onRemove,
                   // make it smaller
                   padding: const EdgeInsets.all(2),
                   constraints: const BoxConstraints(),
@@ -256,8 +392,6 @@ class _DashPanelState extends State<DashPanel> {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: UI to search, add, modify tickers
-
     final width = MediaQuery.of(context).size;
     const cardWidth = 400.0;
     final columns = (width.width / cardWidth).floor();
@@ -282,17 +416,18 @@ class _DashPanelState extends State<DashPanel> {
                   showDialog(
                     context: context,
                     builder: (context) {
-                      return AlertDialog(
-                        title: const Text('Add Ticker'),
-                        content: const Text('Add ticker options go here'),
-                        actions: [
-                          TextButton(
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                            },
-                            child: const Text('OK'),
-                          ),
-                        ],
+                      return TickerConfig(
+                        ticker: DashTicker(ticker1: '', ticker2: ''),
+                        onSave: (ticker) {
+                          setState(() {
+                            _tickers = DashTickers(
+                              tickers: _tickers.tickers + [ticker],
+                            );
+                          });
+                          // save the new ticker to settings
+                          Settings.saveDashTickers(_tickers);
+                        },
+                        add: true,
                       );
                     },
                   );
@@ -302,6 +437,7 @@ class _DashPanelState extends State<DashPanel> {
           );
         }
         return DashCard(
+          key: ValueKey<DashTicker>(_tickers.tickers[index]),
           ticker: _tickers.tickers[index],
           onTitleTap: () {
             _log.info('Tapped on ${_tickers.tickers[index].ticker1}');
@@ -346,7 +482,8 @@ class _DashPanelState extends State<DashPanel> {
                             .toList(),
                   );
                 });
-                // TODO: save the new list to settings
+                // save the new list to settings
+                Settings.saveDashTickers(_tickers);
               }
             });
           },
@@ -355,17 +492,23 @@ class _DashPanelState extends State<DashPanel> {
             showDialog(
               context: context,
               builder: (context) {
-                return AlertDialog(
-                  title: const Text('Configure Ticker'),
-                  content: const Text('Configuration options go here'),
-                  actions: [
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                      },
-                      child: const Text('OK'),
-                    ),
-                  ],
+                return TickerConfig(
+                  ticker: _tickers.tickers[index],
+                  onSave: (ticker) {
+                    setState(() {
+                      _tickers = DashTickers(
+                        tickers:
+                            _tickers.tickers
+                                .map(
+                                  (t) =>
+                                      t == _tickers.tickers[index] ? ticker : t,
+                                )
+                                .toList(),
+                      );
+                    });
+                    // save the new ticker to settings
+                    Settings.saveDashTickers(_tickers);
+                  },
                 );
               },
             );

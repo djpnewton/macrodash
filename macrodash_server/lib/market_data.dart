@@ -775,6 +775,7 @@ class MarketData extends AbstractDownloader {
       _log.warning('Failed to download data for ticker: $ticker2');
       return null;
     }
+    // TODO: combined data seems to be wrong
     // Combine the data for both tickers
     final combinedData = <AmountEntry>[];
     // map of ticker2 date to amount

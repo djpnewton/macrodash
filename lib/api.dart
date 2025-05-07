@@ -283,4 +283,23 @@ class ServerApi {
         return Result.error(Exception(result.error));
     }
   }
+
+  /// Search ticker list
+  Future<Result<TickerSearchResult>> searchTicker(String ticker) async {
+    const url = '$macrodashServerUrl/market/search';
+    final result = await downloadFile(url, {'query': ticker});
+    switch (result) {
+      case Ok():
+        log.info('Ticker list downloaded successfully from $url');
+        final tickerSearchJson = jsonDecode(result.value);
+        if (tickerSearchJson == null) {
+          log.severe('Failed to parse ticker list data from $url');
+          return Result.error(Exception('Failed to parse ticker list data'));
+        }
+        return Result.ok(TickerSearchResult.fromJson(tickerSearchJson));
+      case Error():
+        log.severe('Failed to download ticker list data from $url');
+        return Result.error(Exception(result.error));
+    }
+  }
 }

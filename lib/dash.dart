@@ -229,13 +229,158 @@ class _DashCardState extends State<DashCard> {
     );
   }
 
-  Widget _buildTickerCard() {
-    assert(_customTickerResult != null, 'Custom ticker result is null');
+  Widget _rowText(
+    String top,
+    double fontSizeTop,
+    String bottom,
+    double fontSizeBottom, {
+    Color? topColor,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      children: [
+        Text(
+          top,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: fontSizeTop,
+            color: topColor,
+          ),
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(width: 2),
+        Text(
+          bottom,
+          style: TextStyle(fontSize: fontSizeBottom, color: Colors.grey),
+        ),
+      ],
+    );
+  }
+
+  Widget _stackText(
+    String top,
+    double fontSizeTop,
+    String bottom,
+    double fontSizeBottom, {
+    Color? topColor,
+    Widget? topWidget,
+  }) {
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Align(
+            alignment: Alignment.center,
+            child:
+                topWidget ??
+                Text(
+                  top,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: fontSizeTop,
+                    color: topColor,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+          ),
+        ),
+        Positioned.fill(
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: Text(
+              bottom,
+              style: TextStyle(fontSize: fontSizeBottom, color: Colors.grey),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _buildPriceWidgets(bool useColumn) {
     final change24h = _calculateChange24h(_customTickerResult!.data);
-    final sparklineData = _calculateSparklineValues(_customTickerResult!.data);
     final isUp = change24h >= 0;
     final changeColor = isUp ? Colors.green : Colors.red;
     final changePrefix = isUp ? '+' : '';
+    final boxWidth = useColumn ? 80.0 : 65.0;
+    final boxHeight = useColumn ? 25.0 : 35.0;
+    final fontSize = useColumn ? 14.0 : 16.0;
+
+    final price = SizedBox(
+      width: boxWidth,
+      height: boxHeight,
+      child:
+          useColumn
+              ? _rowText(
+                formatPrice(
+                  _customTickerResult!.data.last.amount,
+                  currencyChar: '',
+                  space: '',
+                ),
+                fontSize,
+                _customTickerResult!.currency,
+                8,
+              )
+              : _stackText(
+                formatPrice(
+                  _customTickerResult!.data.last.amount,
+                  currencyChar: '',
+                  space: '',
+                ),
+                fontSize,
+                _customTickerResult!.currency,
+                8,
+              ),
+    );
+    final change = SizedBox(
+      width: boxWidth,
+      height: boxHeight,
+      child:
+          useColumn
+              ? _rowText(
+                '$changePrefix${change24h.toStringAsFixed(2)}%',
+                fontSize,
+                '24h',
+                8,
+                topColor: changeColor,
+              )
+              : _stackText(
+                '$changePrefix${change24h.toStringAsFixed(2)}%',
+                fontSize,
+                '24h',
+                8,
+                topColor: changeColor,
+              ),
+    );
+    if (useColumn) {
+      return [
+        Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Stock value
+            price,
+            // 24h change
+            change,
+          ],
+        ),
+      ];
+    } else {
+      return [
+        // Stock value
+        price,
+        const SizedBox(width: 4),
+        // 24h change
+        change,
+      ];
+    }
+  }
+
+  Widget _buildTickerCard(BuildContext context) {
+    assert(_customTickerResult != null, 'Custom ticker result is null');
+    final sparklineData = _calculateSparklineValues(_customTickerResult!.data);
+    final useColumn = MediaQuery.of(context).size.width < 400;
 
     return Card(
       //margin: const EdgeInsets.all(8),
@@ -249,105 +394,27 @@ class _DashCardState extends State<DashCard> {
             SizedBox(
               width: 100,
               height: 35,
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: Align(
-                      alignment: Alignment.center,
-                      child: TextButton(
-                        onPressed: widget.onTitleTap,
-                        child: Text(
-                          _customTickerResult!.shortName,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
+              child: _stackText(
+                _customTickerResult!.shortName,
+                16,
+                _customTickerResult!.longName,
+                8,
+                topWidget: TextButton(
+                  onPressed: widget.onTitleTap,
+                  child: Text(
+                    _customTickerResult!.shortName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  Positioned.fill(
-                    child: Align(
-                      alignment: Alignment.bottomCenter,
-                      child: Text(
-                        _customTickerResult!.longName,
-                        style: const TextStyle(fontSize: 8, color: Colors.grey),
-                        maxLines: 1,
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
             const SizedBox(width: 4),
-            // Stock value
-            SizedBox(
-              width: 65,
-              height: 35,
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: Align(
-                      alignment: Alignment.center,
-                      child: Text(
-                        formatPrice(
-                          _customTickerResult!.data.last.amount,
-                          currencyChar: '',
-                          space: '',
-                        ),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ),
-                  Positioned.fill(
-                    child: Align(
-                      alignment: Alignment.bottomCenter,
-                      child: Text(
-                        _customTickerResult!.currency,
-                        style: const TextStyle(fontSize: 8, color: Colors.grey),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 4),
-            // 24h change
-            SizedBox(
-              width: 60,
-              height: 35,
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: Align(
-                      alignment: Alignment.center,
-                      child: Text(
-                        '$changePrefix${change24h.toStringAsFixed(2)}%',
-                        style: TextStyle(
-                          color: changeColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned.fill(
-                    child: Align(
-                      alignment: Alignment.bottomCenter,
-                      child: Text(
-                        '24h',
-                        style: const TextStyle(fontSize: 8, color: Colors.grey),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            // stock value and 24h change
+            ..._buildPriceWidgets(useColumn),
             const SizedBox(width: 4),
             Expanded(child: SizedBox()),
             // Sparkline
@@ -412,7 +479,7 @@ class _DashCardState extends State<DashCard> {
           ),
         );
       case DashState.loaded:
-        return _buildTickerCard();
+        return _buildTickerCard(context);
     }
   }
 }

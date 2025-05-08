@@ -13,6 +13,7 @@ import 'market_cap_page.dart';
 import 'settings_page.dart';
 import 'about_page.dart';
 import 'dash.dart';
+import 'helper.dart';
 
 final log = Logger('mainlogger');
 SharedPreferences? _prefs;
@@ -246,6 +247,8 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  final _refreshIndicatorKey = GlobalKey<RefreshIndicatorState>();
+
   void _navigateToPage(AppPage page) async {
     // close the drawer
     Navigator.pop(context);
@@ -393,7 +396,15 @@ class _MyHomePageState extends State<MyHomePage> {
           ],
         ),
       ),
-      body: DashPanel(),
+      body: DashPanel(refreshKey: _refreshIndicatorKey),
+      floatingActionButton:
+          isWebMobile()
+              ? null
+              : FloatingActionButton(
+                onPressed: () => _refreshIndicatorKey.currentState?.show(),
+                tooltip: 'Refresh',
+                child: const Icon(Icons.refresh),
+              ),
     );
   }
 }

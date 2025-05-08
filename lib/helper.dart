@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import 'helper_stub.dart'
     if (dart.library.html) 'helper_web.dart'
     if (dart.library.io) 'helper_native.dart';
@@ -16,4 +18,10 @@ bool isFullscreen() {
 
 void exitFullscreen() {
   exitFullscreenImpl();
+}
+
+bool isWebMobile() {
+  return kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.android);
 }

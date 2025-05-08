@@ -368,13 +368,16 @@ class _DashCardState extends State<DashCard> {
 }
 
 class DashPanel extends StatefulWidget {
-  const DashPanel({super.key});
+  const DashPanel({super.key, required this.refreshKey});
+
+  final GlobalKey<RefreshIndicatorState> refreshKey;
 
   @override
   State<DashPanel> createState() => _DashPanelState();
 }
 
 class _DashPanelState extends State<DashPanel> {
+  Key _refreshKey = UniqueKey();
   DashTickers _tickers = DashTickers(tickers: []);
 
   @override
@@ -390,131 +393,147 @@ class _DashPanelState extends State<DashPanel> {
     });
   }
 
+  Future<void> _refreshTickers() async {
+    setState(() {
+      _refreshKey = UniqueKey();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size;
     const cardWidth = 400.0;
     final columns = (width.width / cardWidth).floor();
 
-    return GridView.builder(
-      shrinkWrap: true,
-      itemCount: _tickers.tickers.length + 1,
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCountAndFixedHeight(
-        crossAxisCount: columns > 0 ? columns : 1,
-        crossAxisSpacing: 5,
-        mainAxisSpacing: 5,
-        height: 75.0,
-      ),
-      itemBuilder: (context, index) {
-        if (index == _tickers.tickers.length) {
-          return SizedBox(
-            height: 75,
-            child: Center(
-              child: TextButton(
-                child: Text('Add Ticker'),
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) {
-                      return TickerConfig(
-                        ticker: DashTicker(ticker1: '', ticker2: ''),
-                        onSave: (ticker) {
-                          setState(() {
-                            _tickers = DashTickers(
-                              tickers: _tickers.tickers + [ticker],
-                            );
-                          });
-                          // save the new ticker to settings
-                          Settings.saveDashTickers(_tickers);
+    return RefreshIndicator(
+      key: widget.refreshKey,
+      onRefresh: _refreshTickers,
+      child: GridView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        shrinkWrap: true,
+        itemCount: _tickers.tickers.length + 1,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCountAndFixedHeight(
+          crossAxisCount: columns > 0 ? columns : 1,
+          crossAxisSpacing: 5,
+          mainAxisSpacing: 5,
+          height: 75.0,
+        ),
+        itemBuilder: (context, index) {
+          if (index == _tickers.tickers.length) {
+            return SizedBox(
+              height: 75,
+              child: Center(
+                child: TextButton(
+                  child: Text('Add Ticker'),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) {
+                        return TickerConfig(
+                          ticker: DashTicker(ticker1: '', ticker2: ''),
+                          onSave: (ticker) {
+                            setState(() {
+                              _tickers = DashTickers(
+                                tickers: _tickers.tickers + [ticker],
+                              );
+                            });
+                            // save the new ticker to settings
+                            Settings.saveDashTickers(_tickers);
+                          },
+                          add: true,
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            );
+          }
+          return DashCard(
+            key: ValueKey<(DashTicker, Key)>((
+              _tickers.tickers[index],
+              _refreshKey,
+            )),
+            ticker: _tickers.tickers[index],
+            onTitleTap: () {
+              _log.info('Tapped on ${_tickers.tickers[index].ticker1}');
+              // TODO: open ticker details (big chart)
+            },
+            onRemove: () {
+              // are you sure?
+              showDialog<bool?>(
+                context: context,
+                builder: (context) {
+                  return AlertDialog(
+                    title: const Text('Remove Ticker'),
+                    content: const Text(
+                      'Are you sure you want to remove this ticker?',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop(false);
                         },
-                        add: true,
-                      );
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop(true);
+                        },
+                        child: const Text('Remove'),
+                      ),
+                    ],
+                  );
+                },
+              ).then((result) {
+                if (result == true) {
+                  _log.info('Removing ${_tickers.tickers[index].ticker1}');
+                  setState(() {
+                    _tickers = DashTickers(
+                      tickers:
+                          _tickers.tickers
+                              .where(
+                                (ticker) => ticker != _tickers.tickers[index],
+                              )
+                              .toList(),
+                    );
+                  });
+                  // save the new list to settings
+                  Settings.saveDashTickers(_tickers);
+                }
+              });
+            },
+            onConfig: () {
+              _log.info('Configuring ${_tickers.tickers[index].ticker1}');
+              showDialog(
+                context: context,
+                builder: (context) {
+                  return TickerConfig(
+                    ticker: _tickers.tickers[index],
+                    onSave: (ticker) {
+                      setState(() {
+                        _tickers = DashTickers(
+                          tickers:
+                              _tickers.tickers
+                                  .map(
+                                    (t) =>
+                                        t == _tickers.tickers[index]
+                                            ? ticker
+                                            : t,
+                                  )
+                                  .toList(),
+                        );
+                      });
+                      // save the new ticker to settings
+                      Settings.saveDashTickers(_tickers);
                     },
                   );
                 },
-              ),
-            ),
+              );
+            },
           );
-        }
-        return DashCard(
-          key: ValueKey<DashTicker>(_tickers.tickers[index]),
-          ticker: _tickers.tickers[index],
-          onTitleTap: () {
-            _log.info('Tapped on ${_tickers.tickers[index].ticker1}');
-            // TODO: open ticker details (big chart)
-          },
-          onRemove: () {
-            // are you sure?
-            showDialog<bool?>(
-              context: context,
-              builder: (context) {
-                return AlertDialog(
-                  title: const Text('Remove Ticker'),
-                  content: const Text(
-                    'Are you sure you want to remove this ticker?',
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(context).pop(false);
-                      },
-                      child: const Text('Cancel'),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(context).pop(true);
-                      },
-                      child: const Text('Remove'),
-                    ),
-                  ],
-                );
-              },
-            ).then((result) {
-              if (result == true) {
-                _log.info('Removing ${_tickers.tickers[index].ticker1}');
-                setState(() {
-                  _tickers = DashTickers(
-                    tickers:
-                        _tickers.tickers
-                            .where(
-                              (ticker) => ticker != _tickers.tickers[index],
-                            )
-                            .toList(),
-                  );
-                });
-                // save the new list to settings
-                Settings.saveDashTickers(_tickers);
-              }
-            });
-          },
-          onConfig: () {
-            _log.info('Configuring ${_tickers.tickers[index].ticker1}');
-            showDialog(
-              context: context,
-              builder: (context) {
-                return TickerConfig(
-                  ticker: _tickers.tickers[index],
-                  onSave: (ticker) {
-                    setState(() {
-                      _tickers = DashTickers(
-                        tickers:
-                            _tickers.tickers
-                                .map(
-                                  (t) =>
-                                      t == _tickers.tickers[index] ? ticker : t,
-                                )
-                                .toList(),
-                      );
-                    });
-                    // save the new ticker to settings
-                    Settings.saveDashTickers(_tickers);
-                  },
-                );
-              },
-            );
-          },
-        );
-      },
+        },
+      ),
     );
   }
 }

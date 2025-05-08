@@ -79,7 +79,7 @@ class _TickerConfigState extends State<TickerConfig> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(widget.add ? 'Configure Ticker' : 'Add Ticker'),
+      title: Text(widget.add ? 'Add Ticker' : 'Configure Ticker'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

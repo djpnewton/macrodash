@@ -25,3 +25,17 @@ bool isWebMobile() {
       (defaultTargetPlatform == TargetPlatform.iOS ||
           defaultTargetPlatform == TargetPlatform.android);
 }
+
+String formatPrice(
+  double price, {
+  String currencyChar = '\$',
+  String space = ' ',
+}) {
+  if (price >= 1e6) {
+    return '$currencyChar${(price / 1e6).toStringAsFixed(2)}${space}M';
+  } else if (price >= 1e3) {
+    return '$currencyChar${(price / 1e3).toStringAsFixed(2)}${space}K';
+  } else {
+    return '$currencyChar${price.toStringAsFixed(2)}';
+  }
+}

@@ -12,6 +12,7 @@ import 'result.dart';
 import 'sparkline.dart';
 import 'picture_helper.dart';
 import 'settings.dart';
+import 'helper.dart';
 
 final Logger log = Logger('market_cap_page');
 
@@ -96,16 +97,6 @@ class _MarketCapPageState extends State<MarketCapPage> {
     }
   }
 
-  String _formatPrice(double price) {
-    if (price >= 1e6) {
-      return '\$${(price / 1e6).toStringAsFixed(2)} M';
-    } else if (price >= 1e3) {
-      return '\$${(price / 1e3).toStringAsFixed(2)} K';
-    } else {
-      return '\$${price.toStringAsFixed(2)}';
-    }
-  }
-
   Text _formatPriceChange(double priceChange) {
     if (priceChange > 0) {
       return Text(
@@ -179,7 +170,7 @@ class _MarketCapPageState extends State<MarketCapPage> {
     final verySmallWidth = size.width < 500;
     final asset = _marketCapSeries!.data[index];
     final marketCap = _formatMarketCap(asset.marketCap);
-    final price = _formatPrice(asset.price);
+    final price = formatPrice(asset.price);
     final priceChange = _formatPriceChange(asset.priceChangePercent24h);
     final imgSize = 24.0;
     final image =

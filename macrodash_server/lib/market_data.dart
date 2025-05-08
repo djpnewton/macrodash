@@ -763,7 +763,8 @@ class MarketData extends AbstractDownloader {
       return CustomTickerResult(
         ticker1: ticker1,
         ticker2: ticker2,
-        description: ticker1,
+        shortName: ticker1,
+        longName: ticker1Data.name,
         sources: const [MarketData.yahooSource],
         data: ticker1Data.data,
         currency: ticker1Data.currency,
@@ -803,7 +804,8 @@ class MarketData extends AbstractDownloader {
     return CustomTickerResult(
       ticker1: ticker1,
       ticker2: ticker2,
-      description: '$ticker1/$ticker2',
+      shortName: '$ticker1/$ticker2',
+      longName: '$ticker1/$ticker2',
       sources: const [yahooSource],
       data: combinedData,
       currency: 'X',

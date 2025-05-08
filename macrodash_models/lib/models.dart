@@ -346,7 +346,8 @@ class TickerSearchResult extends Equatable {
 class CustomTickerResult extends Equatable {
   final String ticker1;
   final String? ticker2;
-  final String description;
+  final String shortName;
+  final String longName;
   final List<String> sources;
   final List<AmountEntry> data;
   final String currency;
@@ -354,7 +355,8 @@ class CustomTickerResult extends Equatable {
   const CustomTickerResult({
     required this.ticker1,
     required this.ticker2,
-    required this.description,
+    required this.shortName,
+    required this.longName,
     required this.sources,
     required this.data,
     required this.currency,
@@ -371,7 +373,8 @@ class CustomTickerResult extends Equatable {
   List<Object?> get props => [
     ticker1,
     ticker2,
-    description,
+    shortName,
+    longName,
     sources,
     data,
     currency,
@@ -379,7 +382,7 @@ class CustomTickerResult extends Equatable {
 
   @override
   String toString() =>
-      'CustomTickerResult(ticker1: $ticker1, ticker2: $ticker2, description: $description, sources: $sources, data: $data)';
+      'CustomTickerResult(ticker1: $ticker1, ticker2: $ticker2, short name: $shortName, sources: $sources, data: $data)';
 }
 
 @JsonSerializable()

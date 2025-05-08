@@ -8,6 +8,7 @@ import 'fixed_height_grid_delegate.dart';
 import 'ticker_search.dart';
 import 'api.dart';
 import 'result.dart';
+import 'helper.dart';
 
 final _log = Logger('DashPanel');
 
@@ -245,64 +246,113 @@ class _DashCardState extends State<DashCard> {
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
             // Stock name
-            TextButton(
-              onPressed: widget.onTitleTap,
-              child: Text(
-                _customTickerResult!.description,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-                overflow: TextOverflow.ellipsis,
+            SizedBox(
+              width: 100,
+              height: 35,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: TextButton(
+                        onPressed: widget.onTitleTap,
+                        child: Text(
+                          _customTickerResult!.shortName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned.fill(
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      child: Text(
+                        _customTickerResult!.longName,
+                        style: const TextStyle(fontSize: 8, color: Colors.grey),
+                        maxLines: 1,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 4),
             // Stock value
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Text(
-                  _customTickerResult!.data.last.amount.toStringAsFixed(2),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+            SizedBox(
+              width: 65,
+              height: 35,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: Text(
+                        formatPrice(
+                          _customTickerResult!.data.last.amount,
+                          currencyChar: '',
+                          space: '',
+                        ),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(width: 2),
-                Text(
-                  _customTickerResult!.currency,
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ],
+                  Positioned.fill(
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      child: Text(
+                        _customTickerResult!.currency,
+                        style: const TextStyle(fontSize: 8, color: Colors.grey),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 4),
             // 24h change
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  '24h',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                Text(
-                  '$changePrefix${change24h.toStringAsFixed(2)}%',
-                  style: TextStyle(
-                    color: changeColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
+            SizedBox(
+              width: 60,
+              height: 35,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: Text(
+                        '$changePrefix${change24h.toStringAsFixed(2)}%',
+                        style: TextStyle(
+                          color: changeColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                  Positioned.fill(
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      child: Text(
+                        '24h',
+                        style: const TextStyle(fontSize: 8, color: Colors.grey),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 4),
             Expanded(child: SizedBox()),
             // Sparkline
             SizedBox(
-              width: 100,
+              width: 110,
               height: 25,
               child: CustomPaint(
                 painter: SparkPainter(
@@ -311,7 +361,7 @@ class _DashCardState extends State<DashCard> {
                 ),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 4),
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [

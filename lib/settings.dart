@@ -60,17 +60,22 @@ class Settings {
   /// Loads the DashTickers setting from shared preferences.
   /// Returns default tickers if no value is stored.
   static DashTickers loadDashTickers(SharedPreferences prefs) {
+    final defaultTickers = const DashTickers(
+      tickers: [
+        DashTicker(ticker1: 'TSLA', ticker2: null),
+        DashTicker(ticker1: 'BTC-USD', ticker2: null),
+        DashTicker(ticker1: 'GC=F', ticker2: null),
+        DashTicker(ticker1: 'BTC-USD', ticker2: 'GC=F'),
+      ],
+    );
     final value = prefs.getString('dash_tickers');
     if (value == null) {
-      return const DashTickers(
-        tickers: [
-          DashTicker(ticker1: 'TSLA', ticker2: null),
-          DashTicker(ticker1: 'BTC=F', ticker2: null),
-          DashTicker(ticker1: 'GC=F', ticker2: null),
-          DashTicker(ticker1: 'BTC=F', ticker2: 'GC=F'),
-        ],
-      );
+      return defaultTickers;
     }
-    return DashTickers.fromJson(jsonDecode(value));
+    final savedTickers = DashTickers.fromJson(jsonDecode(value));
+    if (savedTickers.tickers.isEmpty) {
+      return defaultTickers;
+    }
+    return savedTickers;
   }
 }

@@ -4,7 +4,7 @@ import 'package:macrodash_models/models.dart';
 
 import '_middleware.dart';
 
-final _log = Logger('market_futures');
+final _log = Logger('ticker_search');
 
 Future<Response> onRequest(RequestContext context) async {
   final dataDownloader = context.read<MarketData>();
@@ -12,12 +12,17 @@ Future<Response> onRequest(RequestContext context) async {
   final request = context.request;
   final params = request.uri.queryParameters;
 
-  // Parse the future parameter into the Futures enum
-  final futureParam = params['future']?.toLowerCase();
-  final future = Futures.values.firstWhere(
-    (r) => r.name.toLowerCase() == futureParam,
-    orElse: () => Futures.gold,
-  );
+  // Parse the ticker1 parameter
+  final ticker1 = params['ticker1'];
+  if (ticker1 == null || ticker1.isEmpty) {
+    return Response(
+      statusCode: 400,
+      body: 'Ticker1 parameter is required.',
+    );
+  }
+
+  // Parse the ticker2 parameter
+  final ticker2 = params['ticker2'];
 
   // Parse the range parameter into the DataRange enum
   final rangeParam = params['range']?.toLowerCase();
@@ -38,18 +43,10 @@ Future<Response> onRequest(RequestContext context) async {
     );
   }
 
-  final data = await dataDownloader.futureData(future, range);
-  if (data == null) {
-    return Response(statusCode: 500, body: 'Failed to fetch future data.');
+  final result = await dataDownloader.custom(ticker1, ticker2, range);
+  if (result == null) {
+    return Response(statusCode: 500, body: 'Failed to fetch ticker data.');
   }
-
-  final description = futuresLabels[future];
-
-  final result = AmountSeries(
-    description: description ?? 'unknown future',
-    sources: const [MarketData.yahooSource],
-    data: data.data,
-  );
 
   // Cache the response
   final resultJson = result.toJson();

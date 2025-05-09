@@ -5,6 +5,37 @@ import 'package:logging/logging.dart';
 import 'package:macrodash_models/models.dart';
 import 'package:macrodash_server/abstract_downloader.dart';
 
+/// Represents the data structure for Yahoo Finance data.
+class YahooData {
+  /// Creates an instance of [YahooData].
+  YahooData({
+    required this.data,
+    required this.currency,
+    required this.ticker,
+    required this.name,
+    required this.exchange,
+    required this.type,
+  });
+
+  /// The list of data entries.
+  List<AmountEntry> data;
+
+  /// The currency of the data.
+  String currency;
+
+  /// The ticker symbol of the data.
+  String ticker;
+
+  /// The name of the data.
+  String name;
+
+  /// The exchange name of the data.
+  String exchange;
+
+  /// The type of the data.
+  String type;
+}
+
 /// A class that handles downloading and parsing data from various sources.
 /// It provides methods to download and parse data related to stock indices,
 /// market capitalization
@@ -29,7 +60,11 @@ class MarketData extends AbstractDownloader {
 
   final Logger _log = Logger('MarketData');
 
-  Future<List<AmountEntry>?> _yahooData(String ticker, DataRange range) async {
+  Future<YahooData?> _yahooData(
+    String ticker,
+    DataRange range, {
+    String interval = '1d',
+  }) async {
     // convert the range enum to a string
     final rangeStr = switch (range) {
       DataRange.oneDay => '1d',
@@ -45,7 +80,8 @@ class MarketData extends AbstractDownloader {
     };
     // Fetch the data from Yahoo Finance
     final url = 'https://query2.finance.yahoo.com/v8/finance/chart/$ticker';
-    final data = await downloadFile(url, {'interval': '1d', 'range': rangeStr});
+    final data =
+        await downloadFile(url, {'interval': interval, 'range': rangeStr});
     if (data == null) {
       _log.warning('Failed to download data for ticker: $ticker');
       return null;
@@ -68,11 +104,30 @@ class MarketData extends AbstractDownloader {
       final date = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
       entries.add(AmountEntry(date: date, amount: closePrice));
     }
-    return entries;
+    final currency =
+        // ignore: avoid_dynamic_calls
+        parsedData['chart']['result'][0]['meta']['currency'] as String;
+    final name =
+        // ignore: avoid_dynamic_calls
+        parsedData['chart']['result'][0]['meta']['shortName'] as String;
+    final exchange =
+        // ignore: avoid_dynamic_calls
+        parsedData['chart']['result'][0]['meta']['exchangeName'] as String;
+    final type =
+        // ignore: avoid_dynamic_calls
+        parsedData['chart']['result'][0]['meta']['instrumentType'] as String;
+    return YahooData(
+      data: entries,
+      currency: currency,
+      ticker: ticker,
+      name: name,
+      exchange: exchange,
+      type: type,
+    );
   }
 
   /// Fetches and parses the Index data into a list of AmountEntry objects.
-  Future<List<AmountEntry>?> indexData(
+  Future<YahooData?> indexData(
     Enum index,
     DataRange range,
   ) async {
@@ -127,7 +182,7 @@ class MarketData extends AbstractDownloader {
   }
 
   /// Fetches and parses the Future data into a list of AmountEntry objects.
-  Future<List<AmountEntry>?> futureData(
+  Future<YahooData?> futureData(
     Futures future,
     DataRange range,
   ) async {
@@ -175,11 +230,11 @@ class MarketData extends AbstractDownloader {
     return _parseSparklineData(parsedData);
   }
 
-  Future<MarketCapEntry?> _tickerMarketCap(
+  Future<MarketOverviewEntry?> _tickerMarketCap(
     String ticker,
     double supply,
     String name,
-    MarketCap type,
+    MarketCategory type,
     String serverUrl,
   ) async {
     // Fetch the data from Yahoo Finance
@@ -212,7 +267,7 @@ class MarketData extends AbstractDownloader {
     // ignore: avoid_dynamic_calls
     final low24h = parsedData['chart']['result'][0]['meta']
         ['regularMarketDayLow'] as double;
-    return MarketCapEntry(
+    return MarketOverviewEntry(
       supply: supply,
       price: price,
       sparkline: sparkline,
@@ -229,13 +284,13 @@ class MarketData extends AbstractDownloader {
     );
   }
 
-  Future<List<MarketCapEntry>?> _marketCapMetals(String serverUrl) async {
+  Future<List<MarketOverviewEntry>?> _marketCapMetals(String serverUrl) async {
     // get gold market cap from yahoo finance
     final goldMarketCap = await _tickerMarketCap(
       'GC=F',
       _goldOunces.toDouble(),
       'Gold',
-      MarketCap.metals,
+      MarketCategory.metals,
       serverUrl,
     );
     if (goldMarketCap == null) {
@@ -247,7 +302,7 @@ class MarketData extends AbstractDownloader {
       'SI=F',
       _silverOunces.toDouble(),
       'Silver',
-      MarketCap.metals,
+      MarketCategory.metals,
       serverUrl,
     );
     if (silverMarketCap == null) {
@@ -259,7 +314,7 @@ class MarketData extends AbstractDownloader {
       'PL=F',
       _platinumOunces.toDouble(),
       'Platinum',
-      MarketCap.metals,
+      MarketCategory.metals,
       serverUrl,
     );
     if (platinumMarketCap == null) {
@@ -271,7 +326,7 @@ class MarketData extends AbstractDownloader {
       'PA=F',
       _palladiumOunces.toDouble(),
       'Palladium',
-      MarketCap.metals,
+      MarketCategory.metals,
       serverUrl,
     );
     if (palladiumMarketCap == null) {
@@ -287,7 +342,7 @@ class MarketData extends AbstractDownloader {
     ];
   }
 
-  Future<List<MarketCapEntry>?> _marketCapCrypto() async {
+  Future<List<MarketOverviewEntry>?> _marketCapCrypto() async {
     // get crypto market cap from coin gecko
     const url = 'https://api.coingecko.com/api/v3/coins/markets';
     final data = await downloadFile(url, {
@@ -302,11 +357,11 @@ class MarketData extends AbstractDownloader {
       _log.warning('Failed to download crypto data');
       return null;
     }
-    // Parse the data into a list of MarketCapEntry objects
+    // Parse the data into a list of MarketOverviewEntry objects
     final parsedData = jsonDecode(data) as List<dynamic>;
     return parsedData
         .map(
-          (e) => MarketCapEntry(
+          (e) => MarketOverviewEntry(
             // ignore: avoid_dynamic_calls
             supply: (e['circulating_supply'] as num).toDouble(),
             // ignore: avoid_dynamic_calls
@@ -330,7 +385,7 @@ class MarketData extends AbstractDownloader {
             name: e['name'] as String,
             // ignore: avoid_dynamic_calls
             image: e['image'] as String,
-            type: MarketCap.crypto,
+            type: MarketCategory.crypto,
             // ignore: avoid_dynamic_calls
             moreInfoLink: 'https://www.coingecko.com/en/coins/${e['id']}',
           ),
@@ -486,7 +541,7 @@ class MarketData extends AbstractDownloader {
     return largestCompanyYahooTickers[ticker];
   }
 
-  Future<List<MarketCapEntry>?> _marketCapStocks(String serverUrl) async {
+  Future<List<MarketOverviewEntry>?> _marketCapStocks(String serverUrl) async {
     const url =
         'https://www.tradingview.com/markets/world-stocks/worlds-largest-companies/';
     final data = await downloadFile(url, {});
@@ -494,9 +549,9 @@ class MarketData extends AbstractDownloader {
       _log.warning('Failed to download stocks data');
       return null;
     }
-    // Parse the data into a list of MarketCapEntry objects
+    // Parse the data into a list of MarketOverviewEntry objects
     final document = parse(data);
-    final entries = <MarketCapEntry>[];
+    final entries = <MarketOverviewEntry>[];
     // Find the table with the class 'table-Ngq2xrcG'
     final table = document.querySelector('.table-Ngq2xrcG');
     if (table == null) {
@@ -546,7 +601,7 @@ class MarketData extends AbstractDownloader {
           : 'https://www.tradingview.com/symbols/$ticker/';
       // create the market cap entry
       entries.add(
-        MarketCapEntry(
+        MarketOverviewEntry(
           supply: 0,
           price: price,
           high24h: 0,
@@ -556,7 +611,7 @@ class MarketData extends AbstractDownloader {
           ticker: ticker,
           name: name,
           image: '$serverUrl/images/logos_stock/${ticker.toUpperCase()}.svg',
-          type: MarketCap.stocks,
+          type: MarketCategory.stocks,
           moreInfoLink: moreInfoLink,
         ),
       );
@@ -565,19 +620,19 @@ class MarketData extends AbstractDownloader {
   }
 
   /// Fetches and parses the market capitalization data into a list of
-  /// MarketCapEntry objects.
+  /// MarketOverviewEntry objects.
   Future<MarketCapSeries?> marketCapData(
-    MarketCap type,
+    MarketCategory type,
     String serverUrl,
   ) async {
-    List<MarketCapEntry>? metalsData = [];
-    List<MarketCapEntry>? cryptoData = [];
-    List<MarketCapEntry>? stocksData = [];
+    List<MarketOverviewEntry>? metalsData = [];
+    List<MarketOverviewEntry>? cryptoData = [];
+    List<MarketOverviewEntry>? stocksData = [];
     var description = '';
     var sources = <String>[];
 
     switch (type) {
-      case MarketCap.all:
+      case MarketCategory.all:
         // Fetch and parse data for all market caps
         var data = await _marketCapMetals(serverUrl);
         if (data != null) {
@@ -605,7 +660,7 @@ class MarketData extends AbstractDownloader {
           MarketData.yahooSource,
           MarketData.coinGeckoSource,
         ];
-      case MarketCap.metals:
+      case MarketCategory.metals:
         // Fetch and parse data for metals
         final data = await _marketCapMetals(serverUrl);
         if (data != null) {
@@ -616,7 +671,7 @@ class MarketData extends AbstractDownloader {
         }
         description = 'Metals';
         sources = [MarketData.yahooSource];
-      case MarketCap.crypto:
+      case MarketCategory.crypto:
         // Fetch and parse data for crypto
         final data = await _marketCapCrypto();
         if (data != null) {
@@ -627,7 +682,7 @@ class MarketData extends AbstractDownloader {
         }
         description = 'Crypto';
         sources = [MarketData.coinGeckoSource];
-      case MarketCap.stocks:
+      case MarketCategory.stocks:
         // Fetch and parse data for stocks
         final data = await _marketCapStocks(serverUrl);
         if (data != null) {
@@ -641,7 +696,7 @@ class MarketData extends AbstractDownloader {
     }
     // Combine all data into a single list
     // and sort the data by market cap in descending order
-    final allData = <MarketCapEntry>[
+    final allData = <MarketOverviewEntry>[
       ...metalsData,
       ...cryptoData,
       ...stocksData,
@@ -663,5 +718,136 @@ class MarketData extends AbstractDownloader {
       return null;
     }
     return data;
+  }
+
+  /// Fetches and parses the ticker search data for a given query.
+  Future<TickerSearchResult?> tickerSearch(String query) async {
+    // Fetch the data from Yahoo Finance
+    const url = 'https://query2.finance.yahoo.com/v1/finance/search';
+    final data = await downloadFile(url, {'q': query});
+    if (data == null) {
+      _log.warning('Failed to download data for ticker search: $query');
+      return null;
+    }
+    // Parse the data into a list of TickerSearchResult objects
+    final parsedData = jsonDecode(data) as Map<String, dynamic>;
+
+    final quotes = parsedData['quotes'] as List<dynamic>;
+    final tickers = quotes.map((e) {
+      return TickerSearchEntry(
+        // ignore: avoid_dynamic_calls
+        ticker: e['symbol'] as String,
+        // ignore: avoid_dynamic_calls
+        name: e['shortname'] as String,
+        // ignore: avoid_dynamic_calls
+        exchange: e['exchDisp'] as String,
+      );
+    }).toList();
+
+    return TickerSearchResult(data: tickers);
+  }
+
+  /// Fetches and parses the ticker data for the given ticker symbols.
+  Future<CustomTickerResult?> custom(
+    String ticker1,
+    String? ticker2,
+    DataRange range,
+  ) async {
+    final interval = switch (range) {
+      DataRange.oneDay => '1m',
+      DataRange.fiveDays => '1m',
+      DataRange.oneMonth => '1h',
+      DataRange.threeMonths => '1h',
+      DataRange.sixMonths => '1h',
+      DataRange.oneYear => '1d',
+      DataRange.twoYears => '1d',
+      DataRange.fiveYears => '1d',
+      DataRange.tenYears => '1d',
+      DataRange.max => '1d',
+    };
+    final rawTicker1Data = await _yahooData(ticker1, range, interval: interval);
+    if (rawTicker1Data == null) {
+      _log.warning('Failed to download data for ticker: $ticker1');
+      return null;
+    }
+    // If ticker2 is not provided, return the data for ticker1
+    if (ticker2 == null || ticker2.isEmpty) {
+      return CustomTickerResult(
+        ticker1: ticker1,
+        ticker2: ticker2,
+        shortName: ticker1,
+        longName: rawTicker1Data.name,
+        sources: const [MarketData.yahooSource],
+        data: rawTicker1Data.data,
+        currency: rawTicker1Data.currency,
+      );
+    }
+
+    final rawTicker2Data = await _yahooData(ticker2, range);
+    if (rawTicker2Data == null) {
+      _log.warning('Failed to download data for ticker: $ticker2');
+      return null;
+    }
+    // Quantize the dates to the day
+    final quantizedTicker1Data = <AmountEntry>[];
+    for (var i = 0; i < rawTicker1Data.data.length; i++) {
+      final date = DateTime(
+        rawTicker1Data.data[i].date.year,
+        rawTicker1Data.data[i].date.month,
+        rawTicker1Data.data[i].date.day,
+      );
+      quantizedTicker1Data
+          .add(AmountEntry(date: date, amount: rawTicker1Data.data[i].amount));
+    }
+    final quantizedTicker2Data = <AmountEntry>[];
+    for (var i = 0; i < rawTicker2Data.data.length; i++) {
+      final date = DateTime(
+        rawTicker2Data.data[i].date.year,
+        rawTicker2Data.data[i].date.month,
+        rawTicker2Data.data[i].date.day,
+      );
+      quantizedTicker2Data
+          .add(AmountEntry(date: date, amount: rawTicker2Data.data[i].amount));
+    }
+
+    // Combine the data for both tickers
+    final combinedData = <AmountEntry>[];
+    // map of ticker2 date to amount
+    final ticker2Map = <DateTime, double>{};
+    for (var i = 0; i < quantizedTicker2Data.length; i++) {
+      final date = quantizedTicker2Data[i].date;
+      final amount = quantizedTicker2Data[i].amount;
+      ticker2Map[date] = amount;
+    }
+    // iterate over ticker1 data and divide by ticker2 data
+    for (var i = 0; i < quantizedTicker1Data.length; i++) {
+      final date = quantizedTicker1Data[i].date;
+      final amount1 = quantizedTicker1Data[i].amount;
+      // if ticker2Map does not contain the date, skip it
+      if (!ticker2Map.containsKey(date)) {
+        continue;
+      }
+      final amount2 = ticker2Map[date]!;
+      // avoid division by zero
+      if (amount2 == 0) {
+        continue;
+      }
+      combinedData.add(AmountEntry(date: date, amount: amount1 / amount2));
+    }
+    _log
+      ..info('rawTicker1Data: ${rawTicker1Data.data.length}')
+      ..info('rawTicker2Data: ${rawTicker2Data.data.length}')
+      ..info(
+        'Combined data for $ticker1 and $ticker2: ${combinedData.length} entries',
+      );
+    return CustomTickerResult(
+      ticker1: ticker1,
+      ticker2: ticker2,
+      shortName: '$ticker1/$ticker2',
+      longName: '$ticker1/$ticker2',
+      sources: const [yahooSource],
+      data: combinedData,
+      currency: 'X',
+    );
   }
 }

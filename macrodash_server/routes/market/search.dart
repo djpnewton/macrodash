@@ -1,10 +1,9 @@
 import 'package:dart_frog/dart_frog.dart';
 import 'package:logging/logging.dart';
-import 'package:macrodash_models/models.dart';
 
 import '_middleware.dart';
 
-final _log = Logger('market_capitalization');
+final _log = Logger('ticker_search');
 
 Future<Response> onRequest(RequestContext context) async {
   final dataDownloader = context.read<MarketData>();
@@ -12,12 +11,14 @@ Future<Response> onRequest(RequestContext context) async {
   final request = context.request;
   final params = request.uri.queryParameters;
 
-  // Parse the type parameter into the MarketCategory enum
-  final typeParam = params['type']?.toLowerCase();
-  final type = MarketCategory.values.firstWhere(
-    (r) => r.name.toLowerCase() == typeParam,
-    orElse: () => MarketCategory.all,
-  );
+  // Parse the query parameter
+  final query = params['query'];
+  if (query == null || query.isEmpty) {
+    return Response(
+      statusCode: 400,
+      body: 'Query parameter is required.',
+    );
+  }
 
   // check cache
   final cache = context.read<Cache>();
@@ -31,11 +32,12 @@ Future<Response> onRequest(RequestContext context) async {
     );
   }
 
-  final serverUrl =
-      '${context.request.uri.scheme}://${context.request.uri.authority}';
-  final result = await dataDownloader.marketCapData(type, serverUrl);
+  final result = await dataDownloader.tickerSearch(query);
   if (result == null) {
-    return Response(statusCode: 500, body: 'Failed to fetch market cap data.');
+    return Response(
+      statusCode: 500,
+      body: 'Failed to fetch ticker search data.',
+    );
   }
 
   // Cache the response

@@ -12,6 +12,7 @@ import 'result.dart';
 import 'sparkline.dart';
 import 'picture_helper.dart';
 import 'settings.dart';
+import 'helper.dart';
 
 final Logger log = Logger('market_cap_page');
 
@@ -31,7 +32,7 @@ class _MarketCapPageState extends State<MarketCapPage> {
   final ServerApi _api = ServerApi();
   MarketCapSeries? _marketCapSeries;
   bool _isLoading = true;
-  late MarketCap _selectedMarket;
+  late MarketCategory _selectedMarket;
   Map<String, SparklineStatus> _sparklineStatus = {};
   Map<String, YahooSparklineData> _sparklineData = {};
 
@@ -41,11 +42,11 @@ class _MarketCapPageState extends State<MarketCapPage> {
     // Initialize with the default market
     _selectedMarket =
         widget.market != null
-            ? MarketCap.values.firstWhere(
+            ? MarketCategory.values.firstWhere(
               (market) => market.name == widget.market,
-              orElse: () => MarketCap.all,
+              orElse: () => MarketCategory.all,
             )
-            : MarketCap.all;
+            : MarketCategory.all;
     _fetchData();
   }
 
@@ -76,7 +77,7 @@ class _MarketCapPageState extends State<MarketCapPage> {
     });
   }
 
-  void _marketSelect(MarketCap market) {
+  void _marketSelect(MarketCategory market) {
     Settings.saveChartSetting(widget.title, 'market', market.name);
     setState(() {
       _selectedMarket = market;
@@ -93,16 +94,6 @@ class _MarketCapPageState extends State<MarketCapPage> {
       return '\$${(marketCap / 1e6).toStringAsFixed(2)} M';
     } else {
       return '\$${marketCap.toStringAsFixed(2)}';
-    }
-  }
-
-  String _formatPrice(double price) {
-    if (price >= 1e6) {
-      return '\$${(price / 1e6).toStringAsFixed(2)} M';
-    } else if (price >= 1e3) {
-      return '\$${(price / 1e3).toStringAsFixed(2)} K';
-    } else {
-      return '\$${price.toStringAsFixed(2)}';
     }
   }
 
@@ -179,7 +170,7 @@ class _MarketCapPageState extends State<MarketCapPage> {
     final verySmallWidth = size.width < 500;
     final asset = _marketCapSeries!.data[index];
     final marketCap = _formatMarketCap(asset.marketCap);
-    final price = _formatPrice(asset.price);
+    final price = formatPrice(asset.price);
     final priceChange = _formatPriceChange(asset.priceChangePercent24h);
     final imgSize = 24.0;
     final image =
@@ -377,12 +368,12 @@ class _MarketCapPageState extends State<MarketCapPage> {
       uri: GoRouterState.of(context).uri,
       queryParams: {'market': _selectedMarket.name},
     );
-    final categoryButtons = OptionButtons<MarketCap>(
+    final categoryButtons = OptionButtons<MarketCategory>(
       popoutTitle: 'Category',
       selectedOption: _selectedMarket,
-      values: MarketCap.values,
+      values: MarketCategory.values,
       onOptionSelected: _marketSelect,
-      labels: marketCapLabels,
+      labels: marketCategoryLabels,
       popout: popouts,
     );
     final Widget options = switch (optionsSide) {

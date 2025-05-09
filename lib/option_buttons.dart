@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart';
 import 'package:share_plus/share_plus.dart';
 
 import 'package:macrodash_models/models.dart';
@@ -284,10 +283,7 @@ class ShareButton extends StatelessWidget {
     // manually construct the share URI to conform to flutter routing
     // uris where the query is after the fragment
     final shareUri = 'https://macrodash.me/#${uri.path}?$query';
-    final isWebMobile =
-        kIsWeb &&
-        (defaultTargetPlatform == TargetPlatform.iOS ||
-            defaultTargetPlatform == TargetPlatform.android);
+
     showDialog<ShareMethod>(
       context: context,
       builder: (context) {
@@ -314,7 +310,7 @@ class ShareButton extends StatelessWidget {
                       Navigator.of(context).pop();
                     },
                   ),
-                  if (isWebMobile) ...[
+                  if (isWebMobile()) ...[
                     TextButton.icon(
                       label: const Text('Share Link'),
                       icon: const Icon(Icons.share),

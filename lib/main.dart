@@ -18,31 +18,6 @@ import 'helper.dart';
 final log = Logger('mainlogger');
 SharedPreferences? _prefs;
 
-enum AppPage {
-  m2,
-  debt,
-  bondRates,
-  indices,
-  futures,
-  marketCap,
-  settings,
-  about,
-}
-
-const _pageTitles = {
-  AppPage.m2: 'M2',
-  AppPage.debt: 'Debt',
-  AppPage.bondRates: 'Bond Rates',
-  AppPage.indices: 'Indices',
-  AppPage.futures: 'Futures',
-  AppPage.marketCap: 'Market Cap',
-  AppPage.settings: 'Settings',
-  AppPage.about: 'About',
-};
-String _pageTitle(AppPage page) {
-  return _pageTitles[page] ?? 'Unknown';
-}
-
 void main() async {
   Logger.root.level = Level.ALL; // defaults to Level.INFO
   Logger.root.onRecord.listen((record) {
@@ -56,6 +31,13 @@ void main() async {
   _prefs = await SharedPreferences.getInstance();
   log.info('SharedPreferences initialized');
   runApp(const MyApp());
+}
+
+DashTicker _dashTicker(GoRouterState state) {
+  // Load the ticker from the query parameters
+  final ticker1 = state.uri.queryParameters['ticker1'];
+  final ticker2 = state.uri.queryParameters['ticker2'];
+  return DashTicker(ticker1: ticker1 ?? 'SPY', ticker2: ticker2 ?? '');
 }
 
 String? _chartSetting(
@@ -86,16 +68,28 @@ final _router = GoRouter(
       builder: (context, state) => const MyHomePage(title: 'MacroDash'),
       routes: <RouteBase>[
         GoRoute(
+          name: AppPage.ticker.name,
+          path: '/ticker',
+          builder:
+              (context, state) => AmountSeriesPage(
+                title: pageTitle(AppPage.ticker),
+                chartLibrary: _chartLibrary(),
+                ticker: _dashTicker(state),
+                zoom: _chartSetting(state, pageTitle(AppPage.ticker), 'zoom'),
+              ),
+        ),
+
+        GoRoute(
           name: AppPage.m2.name,
           path: '/m2',
           builder:
               (context, state) => AmountSeriesPage(
-                title: _pageTitle(AppPage.m2),
+                title: pageTitle(AppPage.m2),
                 chartLibrary: _chartLibrary(),
-                region: _chartSetting(state, _pageTitle(AppPage.m2), 'region'),
+                region: _chartSetting(state, pageTitle(AppPage.m2), 'region'),
                 regions: M2Region.values,
                 regionLabels: m2RegionLabels,
-                zoom: _chartSetting(state, _pageTitle(AppPage.m2), 'zoom'),
+                zoom: _chartSetting(state, pageTitle(AppPage.m2), 'zoom'),
               ),
         ),
         GoRoute(
@@ -103,16 +97,12 @@ final _router = GoRouter(
           path: '/debt',
           builder:
               (context, state) => AmountSeriesPage(
-                title: _pageTitle(AppPage.debt),
+                title: pageTitle(AppPage.debt),
                 chartLibrary: _chartLibrary(),
-                region: _chartSetting(
-                  state,
-                  _pageTitle(AppPage.debt),
-                  'region',
-                ),
+                region: _chartSetting(state, pageTitle(AppPage.debt), 'region'),
                 regions: DebtRegion.values,
                 regionLabels: debtRegionLabels,
-                zoom: _chartSetting(state, _pageTitle(AppPage.debt), 'zoom'),
+                zoom: _chartSetting(state, pageTitle(AppPage.debt), 'zoom'),
               ),
         ),
         GoRoute(
@@ -120,18 +110,18 @@ final _router = GoRouter(
           path: '/bondRates',
           builder:
               (context, state) => AmountSeriesPage(
-                title: _pageTitle(AppPage.bondRates),
+                title: pageTitle(AppPage.bondRates),
                 chartLibrary: _chartLibrary(),
                 region: _chartSetting(
                   state,
-                  _pageTitle(AppPage.bondRates),
+                  pageTitle(AppPage.bondRates),
                   'region',
                 ),
                 regions: BondRateRegion.values,
                 regionLabels: bondRateRegionLabels,
                 category: _chartSetting(
                   state,
-                  _pageTitle(AppPage.bondRates),
+                  pageTitle(AppPage.bondRates),
                   'category',
                 ),
                 categories: [BondTerm.values],
@@ -139,7 +129,7 @@ final _router = GoRouter(
                 categoryTitles: ['Term'],
                 zoom: _chartSetting(
                   state,
-                  _pageTitle(AppPage.bondRates),
+                  pageTitle(AppPage.bondRates),
                   'zoom',
                 ),
               ),
@@ -149,18 +139,18 @@ final _router = GoRouter(
           path: '/indices',
           builder:
               (context, state) => AmountSeriesPage(
-                title: _pageTitle(AppPage.indices),
+                title: pageTitle(AppPage.indices),
                 chartLibrary: _chartLibrary(),
                 region: _chartSetting(
                   state,
-                  _pageTitle(AppPage.indices),
+                  pageTitle(AppPage.indices),
                   'region',
                 ),
                 regions: MarketIndexRegion.values,
                 regionLabels: marketIndexRegionLabels,
                 category: _chartSetting(
                   state,
-                  _pageTitle(AppPage.indices),
+                  pageTitle(AppPage.indices),
                   'category',
                 ),
                 categories: [
@@ -174,7 +164,7 @@ final _router = GoRouter(
                   marketIndexAsiaLabels,
                 ],
                 categoryTitles: ['Index', 'Index', 'Index'],
-                zoom: _chartSetting(state, _pageTitle(AppPage.indices), 'zoom'),
+                zoom: _chartSetting(state, pageTitle(AppPage.indices), 'zoom'),
               ),
         ),
         GoRoute(
@@ -182,16 +172,16 @@ final _router = GoRouter(
           path: '/futures',
           builder:
               (context, state) => AmountSeriesPage(
-                title: _pageTitle(AppPage.futures),
+                title: pageTitle(AppPage.futures),
                 chartLibrary: _chartLibrary(),
                 region: _chartSetting(
                   state,
-                  _pageTitle(AppPage.futures),
+                  pageTitle(AppPage.futures),
                   'region',
                 ),
                 regions: Futures.values,
                 regionLabels: futuresLabels,
-                zoom: _chartSetting(state, _pageTitle(AppPage.futures), 'zoom'),
+                zoom: _chartSetting(state, pageTitle(AppPage.futures), 'zoom'),
               ),
         ),
         GoRoute(
@@ -199,10 +189,10 @@ final _router = GoRouter(
           path: '/marketCap',
           builder:
               (context, state) => MarketCapPage(
-                title: _pageTitle(AppPage.marketCap),
+                title: pageTitle(AppPage.marketCap),
                 market: _chartSetting(
                   state,
-                  _pageTitle(AppPage.marketCap),
+                  pageTitle(AppPage.marketCap),
                   'market',
                 ),
               ),
@@ -257,6 +247,8 @@ class _MyHomePageState extends State<MyHomePage> {
     // navigate to the selected page
     if (mounted) {
       switch (page) {
+        case AppPage.ticker:
+          throw Exception('Ticker page not accessed from here');
         case AppPage.m2:
           log.info('Navigating to M2');
           context.goNamed(AppPage.m2.name);

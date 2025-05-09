@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:macrodash_models/models.dart';
 import 'package:logging/logging.dart';
+import 'package:go_router/go_router.dart';
 
 import 'settings.dart';
 import 'sparkline.dart';
@@ -9,6 +10,8 @@ import 'ticker_search.dart';
 import 'api.dart';
 import 'result.dart';
 import 'helper.dart';
+import 'amount_series_page.dart';
+import 'config.dart';
 
 final _log = Logger('DashPanel');
 
@@ -572,9 +575,17 @@ class _DashPanelState extends State<DashPanel> {
               _refreshKey,
             )),
             ticker: _tickers.tickers[index],
-            onTitleTap: () {
-              _log.info('Tapped on ${_tickers.tickers[index].ticker1}');
-              // TODO: open ticker details (big chart)
+            onTitleTap: () async {
+              final ticker = _tickers.tickers[index];
+              _log.info('Tapped on ${ticker.ticker1}');
+              log.info('Navigating to Ticker');
+              context.goNamed(
+                AppPage.ticker.name,
+                queryParameters: {
+                  'ticker1': ticker.ticker1,
+                  'ticker2': ticker.ticker2 ?? '',
+                },
+              );
             },
             onRemove: () {
               // are you sure?

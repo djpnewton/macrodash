@@ -138,6 +138,7 @@ class _AmountSeriesPageState<T extends Enum, C extends Enum>
   }
 
   Future<void> _fetchData() async {
+    _amountSeries = null;
     setState(() {
       _isLoading = true;
     });

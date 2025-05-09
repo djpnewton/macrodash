@@ -443,6 +443,9 @@ class _DashCardState extends State<DashCard> {
                   // make it smaller
                   padding: const EdgeInsets.all(2),
                   constraints: const BoxConstraints(),
+                  style: const ButtonStyle(
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 // Remove button
@@ -453,6 +456,9 @@ class _DashCardState extends State<DashCard> {
                   // make it smaller
                   padding: const EdgeInsets.all(2),
                   constraints: const BoxConstraints(),
+                  style: const ButtonStyle(
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
                 ),
               ],
             ),

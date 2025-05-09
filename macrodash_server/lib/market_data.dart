@@ -753,8 +753,20 @@ class MarketData extends AbstractDownloader {
     String? ticker2,
     DataRange range,
   ) async {
-    final ticker1Data = await _yahooData(ticker1, range, interval: '1h');
-    if (ticker1Data == null) {
+    final interval = switch (range) {
+      DataRange.oneDay => '1m',
+      DataRange.fiveDays => '1m',
+      DataRange.oneMonth => '1h',
+      DataRange.threeMonths => '1h',
+      DataRange.sixMonths => '1h',
+      DataRange.oneYear => '1d',
+      DataRange.twoYears => '1d',
+      DataRange.fiveYears => '1d',
+      DataRange.tenYears => '1d',
+      DataRange.max => '1d',
+    };
+    final rawTicker1Data = await _yahooData(ticker1, range, interval: interval);
+    if (rawTicker1Data == null) {
       _log.warning('Failed to download data for ticker: $ticker1');
       return null;
     }
@@ -764,32 +776,53 @@ class MarketData extends AbstractDownloader {
         ticker1: ticker1,
         ticker2: ticker2,
         shortName: ticker1,
-        longName: ticker1Data.name,
+        longName: rawTicker1Data.name,
         sources: const [MarketData.yahooSource],
-        data: ticker1Data.data,
-        currency: ticker1Data.currency,
+        data: rawTicker1Data.data,
+        currency: rawTicker1Data.currency,
       );
     }
 
-    final ticker2Data = await _yahooData(ticker2, range);
-    if (ticker2Data == null) {
+    final rawTicker2Data = await _yahooData(ticker2, range);
+    if (rawTicker2Data == null) {
       _log.warning('Failed to download data for ticker: $ticker2');
       return null;
     }
-    // TODO: combined data seems to be wrong
+    // Quantize the dates to the day
+    final quantizedTicker1Data = <AmountEntry>[];
+    for (var i = 0; i < rawTicker1Data.data.length; i++) {
+      final date = DateTime(
+        rawTicker1Data.data[i].date.year,
+        rawTicker1Data.data[i].date.month,
+        rawTicker1Data.data[i].date.day,
+      );
+      quantizedTicker1Data
+          .add(AmountEntry(date: date, amount: rawTicker1Data.data[i].amount));
+    }
+    final quantizedTicker2Data = <AmountEntry>[];
+    for (var i = 0; i < rawTicker2Data.data.length; i++) {
+      final date = DateTime(
+        rawTicker2Data.data[i].date.year,
+        rawTicker2Data.data[i].date.month,
+        rawTicker2Data.data[i].date.day,
+      );
+      quantizedTicker2Data
+          .add(AmountEntry(date: date, amount: rawTicker2Data.data[i].amount));
+    }
+
     // Combine the data for both tickers
     final combinedData = <AmountEntry>[];
     // map of ticker2 date to amount
     final ticker2Map = <DateTime, double>{};
-    for (var i = 0; i < ticker2Data.data.length; i++) {
-      final date = ticker2Data.data[i].date;
-      final amount = ticker2Data.data[i].amount;
+    for (var i = 0; i < quantizedTicker2Data.length; i++) {
+      final date = quantizedTicker2Data[i].date;
+      final amount = quantizedTicker2Data[i].amount;
       ticker2Map[date] = amount;
     }
     // iterate over ticker1 data and divide by ticker2 data
-    for (var i = 0; i < ticker1Data.data.length; i++) {
-      final date = ticker1Data.data[i].date;
-      final amount1 = ticker1Data.data[i].amount;
+    for (var i = 0; i < quantizedTicker1Data.length; i++) {
+      final date = quantizedTicker1Data[i].date;
+      final amount1 = quantizedTicker1Data[i].amount;
       // if ticker2Map does not contain the date, skip it
       if (!ticker2Map.containsKey(date)) {
         continue;
@@ -801,6 +834,12 @@ class MarketData extends AbstractDownloader {
       }
       combinedData.add(AmountEntry(date: date, amount: amount1 / amount2));
     }
+    _log
+      ..info('rawTicker1Data: ${rawTicker1Data.data.length}')
+      ..info('rawTicker2Data: ${rawTicker2Data.data.length}')
+      ..info(
+        'Combined data for $ticker1 and $ticker2: ${combinedData.length} entries',
+      );
     return CustomTickerResult(
       ticker1: ticker1,
       ticker2: ticker2,

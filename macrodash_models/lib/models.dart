@@ -3,6 +3,15 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'models.g.dart';
 
+extension FirstWhereOrNullExtension<E> on Iterable<E> {
+  E? firstWhereOrNull(bool Function(E) test) {
+    for (E element in this) {
+      if (test(element)) return element;
+    }
+    return null;
+  }
+}
+
 /// Represents the server version and minimum client version
 @JsonSerializable()
 class VersionInfo extends Equatable {
@@ -39,6 +48,9 @@ enum DataRange {
   tenYears,
   max,
 }
+
+/// Enum to represent the interval of data.
+enum DataInterval { oneMinute, oneHour, oneDay, oneWeek, oneMonth }
 
 /// Enum to represent the region for M2 data.
 enum M2Region { usa, euro, japan, all }
@@ -349,7 +361,8 @@ class CustomTickerResult extends Equatable {
   final String shortName;
   final String longName;
   final List<String> sources;
-  final List<AmountEntry> data;
+  final List<AmountEntry> priceData;
+  final List<AmountEntry> dividendData;
   final String currency;
 
   const CustomTickerResult({
@@ -358,7 +371,8 @@ class CustomTickerResult extends Equatable {
     required this.shortName,
     required this.longName,
     required this.sources,
-    required this.data,
+    required this.priceData,
+    required this.dividendData,
     required this.currency,
   });
 
@@ -376,13 +390,14 @@ class CustomTickerResult extends Equatable {
     shortName,
     longName,
     sources,
-    data,
+    priceData,
+    dividendData,
     currency,
   ];
 
   @override
   String toString() =>
-      'CustomTickerResult(ticker1: $ticker1, ticker2: $ticker2, short name: $shortName, sources: $sources, data: $data)';
+      'CustomTickerResult(ticker1: $ticker1, ticker2: $ticker2, short name: $shortName, sources: $sources, priceData: $priceData)';
 }
 
 @JsonSerializable()

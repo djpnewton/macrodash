@@ -9,7 +9,8 @@ import 'package:macrodash_server/abstract_downloader.dart';
 class YahooData {
   /// Creates an instance of [YahooData].
   YahooData({
-    required this.data,
+    required this.priceData,
+    required this.dividendData,
     required this.currency,
     required this.ticker,
     required this.name,
@@ -17,8 +18,11 @@ class YahooData {
     required this.type,
   });
 
-  /// The list of data entries.
-  List<AmountEntry> data;
+  /// The list of price data entries.
+  List<AmountEntry> priceData;
+
+  /// The list of dividend data entries.
+  List<AmountEntry> dividendData;
 
   /// The currency of the data.
   String currency;
@@ -80,21 +84,27 @@ class MarketData extends AbstractDownloader {
     };
     // Fetch the data from Yahoo Finance
     final url = 'https://query2.finance.yahoo.com/v8/finance/chart/$ticker';
-    final data =
-        await downloadFile(url, {'interval': interval, 'range': rangeStr});
+    final data = await downloadFile(
+      url,
+      {'interval': interval, 'range': rangeStr, 'events': 'div'},
+    );
     if (data == null) {
       _log.warning('Failed to download data for ticker: $ticker');
       return null;
     }
     // Parse the data into a list of AmountEntry objects
     final parsedData = jsonDecode(data) as Map<String, dynamic>;
-    final entries = <AmountEntry>[];
+    final chartData =
+        // ignore: avoid_dynamic_calls
+        parsedData['chart']['result'][0] as Map<String, dynamic>;
+    final priceEntries = <AmountEntry>[];
     final timestamps =
         // ignore: avoid_dynamic_calls
-        parsedData['chart']['result'][0]['timestamp'] as List<dynamic>;
+        chartData['timestamp'] as List<dynamic>;
     // ignore: avoid_dynamic_calls
-    final closePrices = parsedData['chart']['result'][0]['indicators']['quote']
-        [0]['close'] as List<dynamic>;
+    final closePrices =
+        // ignore: avoid_dynamic_calls
+        chartData['indicators']['quote'][0]['close'] as List<dynamic>;
     for (var i = 0; i < timestamps.length; i++) {
       final timestamp = timestamps[i] as int;
       final closePrice = closePrices[i] as double?;
@@ -102,22 +112,37 @@ class MarketData extends AbstractDownloader {
         continue; // Skip if close price is null
       }
       final date = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
-      entries.add(AmountEntry(date: date, amount: closePrice));
+      priceEntries.add(AmountEntry(date: date, amount: closePrice));
+    }
+    final dividendEntries = <AmountEntry>[];
+    if (chartData.containsKey('events')) {
+      final events = chartData['events'] as Map<String, dynamic>;
+      if (events.containsKey('dividends')) {
+        final dividends = events['dividends'] as Map<String, dynamic>;
+        for (final entry in dividends.entries) {
+          final timestamp = int.parse(entry.key);
+          final dividend = entry.value as Map<String, dynamic>;
+          final date = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
+          final amount = dividend['amount'] as double;
+          dividendEntries.add(AmountEntry(date: date, amount: amount));
+        }
+      }
     }
     final currency =
         // ignore: avoid_dynamic_calls
-        parsedData['chart']['result'][0]['meta']['currency'] as String;
+        chartData['meta']['currency'] as String;
     final name =
         // ignore: avoid_dynamic_calls
-        parsedData['chart']['result'][0]['meta']['shortName'] as String;
+        chartData['meta']['shortName'] as String;
     final exchange =
         // ignore: avoid_dynamic_calls
-        parsedData['chart']['result'][0]['meta']['exchangeName'] as String;
+        chartData['meta']['exchangeName'] as String;
     final type =
         // ignore: avoid_dynamic_calls
-        parsedData['chart']['result'][0]['meta']['instrumentType'] as String;
+        chartData['meta']['instrumentType'] as String;
     return YahooData(
-      data: entries,
+      priceData: priceEntries,
+      dividendData: dividendEntries,
       currency: currency,
       ticker: ticker,
       name: name,
@@ -747,25 +772,39 @@ class MarketData extends AbstractDownloader {
     return TickerSearchResult(data: tickers);
   }
 
+  String? _yahooInterval(DataInterval? interval) {
+    if (interval == null) return null;
+    return switch (interval) {
+      DataInterval.oneMinute => '1m',
+      DataInterval.oneHour => '1h',
+      DataInterval.oneDay => '1d',
+      DataInterval.oneWeek => '1wk',
+      DataInterval.oneMonth => '1mo',
+    };
+  }
+
   /// Fetches and parses the ticker data for the given ticker symbols.
   Future<CustomTickerResult?> custom(
     String ticker1,
     String? ticker2,
     DataRange range,
+    DataInterval? interval,
   ) async {
-    final interval = switch (range) {
-      DataRange.oneDay => '1m',
-      DataRange.fiveDays => '1m',
-      DataRange.oneMonth => '1h',
-      DataRange.threeMonths => '1h',
-      DataRange.sixMonths => '1h',
-      DataRange.oneYear => '1d',
-      DataRange.twoYears => '1d',
-      DataRange.fiveYears => '1d',
-      DataRange.tenYears => '1d',
-      DataRange.max => '1d',
-    };
-    final rawTicker1Data = await _yahooData(ticker1, range, interval: interval);
+    final yahooInterval = _yahooInterval(interval) ??
+        switch (range) {
+          DataRange.oneDay => '1m',
+          DataRange.fiveDays => '1m',
+          DataRange.oneMonth => '1h',
+          DataRange.threeMonths => '1h',
+          DataRange.sixMonths => '1h',
+          DataRange.oneYear => '1d',
+          DataRange.twoYears => '1d',
+          DataRange.fiveYears => '1d',
+          DataRange.tenYears => '1d',
+          DataRange.max => '1d',
+        };
+    final rawTicker1Data =
+        await _yahooData(ticker1, range, interval: yahooInterval);
     if (rawTicker1Data == null) {
       _log.warning('Failed to download data for ticker: $ticker1');
       return null;
@@ -778,7 +817,8 @@ class MarketData extends AbstractDownloader {
         shortName: ticker1,
         longName: rawTicker1Data.name,
         sources: const [MarketData.yahooSource],
-        data: rawTicker1Data.data,
+        priceData: rawTicker1Data.priceData,
+        dividendData: rawTicker1Data.dividendData,
         currency: rawTicker1Data.currency,
       );
     }
@@ -790,24 +830,26 @@ class MarketData extends AbstractDownloader {
     }
     // Quantize the dates to the day
     final quantizedTicker1Data = <AmountEntry>[];
-    for (var i = 0; i < rawTicker1Data.data.length; i++) {
+    for (var i = 0; i < rawTicker1Data.priceData.length; i++) {
       final date = DateTime(
-        rawTicker1Data.data[i].date.year,
-        rawTicker1Data.data[i].date.month,
-        rawTicker1Data.data[i].date.day,
+        rawTicker1Data.priceData[i].date.year,
+        rawTicker1Data.priceData[i].date.month,
+        rawTicker1Data.priceData[i].date.day,
       );
-      quantizedTicker1Data
-          .add(AmountEntry(date: date, amount: rawTicker1Data.data[i].amount));
+      quantizedTicker1Data.add(
+        AmountEntry(date: date, amount: rawTicker1Data.priceData[i].amount),
+      );
     }
     final quantizedTicker2Data = <AmountEntry>[];
-    for (var i = 0; i < rawTicker2Data.data.length; i++) {
+    for (var i = 0; i < rawTicker2Data.priceData.length; i++) {
       final date = DateTime(
-        rawTicker2Data.data[i].date.year,
-        rawTicker2Data.data[i].date.month,
-        rawTicker2Data.data[i].date.day,
+        rawTicker2Data.priceData[i].date.year,
+        rawTicker2Data.priceData[i].date.month,
+        rawTicker2Data.priceData[i].date.day,
       );
-      quantizedTicker2Data
-          .add(AmountEntry(date: date, amount: rawTicker2Data.data[i].amount));
+      quantizedTicker2Data.add(
+        AmountEntry(date: date, amount: rawTicker2Data.priceData[i].amount),
+      );
     }
 
     // Combine the data for both tickers
@@ -835,9 +877,10 @@ class MarketData extends AbstractDownloader {
       combinedData.add(AmountEntry(date: date, amount: amount1 / amount2));
     }
     _log
-      ..info('rawTicker1Data: ${rawTicker1Data.data.length}')
-      ..info('rawTicker2Data: ${rawTicker2Data.data.length}')
+      ..info('rawTicker1Data: ${rawTicker1Data.priceData.length}')
+      ..info('rawTicker2Data: ${rawTicker2Data.priceData.length}')
       ..info(
+        // ignore: lines_longer_than_80_chars
         'Combined data for $ticker1 and $ticker2: ${combinedData.length} entries',
       );
     return CustomTickerResult(
@@ -846,7 +889,8 @@ class MarketData extends AbstractDownloader {
       shortName: '$ticker1/$ticker2',
       longName: '$ticker1/$ticker2',
       sources: const [yahooSource],
-      data: combinedData,
+      priceData: combinedData,
+      dividendData: const [],
       currency: 'X',
     );
   }

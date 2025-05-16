@@ -31,6 +31,12 @@ Future<Response> onRequest(RequestContext context) async {
     orElse: () => DataRange.max,
   );
 
+  // Parse the interval parameter into the Interval enum
+  final intervalParam = params['interval']?.toLowerCase();
+  final interval = DataInterval.values.firstWhereOrNull(
+    (t) => t.name.toLowerCase() == intervalParam,
+  );
+
   // check cache
   final cache = context.read<Cache>();
   final key = request.uri.toString();
@@ -43,7 +49,7 @@ Future<Response> onRequest(RequestContext context) async {
     );
   }
 
-  final result = await dataDownloader.custom(ticker1, ticker2, range);
+  final result = await dataDownloader.custom(ticker1, ticker2, range, interval);
   if (result == null) {
     return Response(statusCode: 500, body: 'Failed to fetch ticker data.');
   }

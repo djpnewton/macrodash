@@ -157,8 +157,12 @@ CustomTickerResult _$CustomTickerResultFromJson(Map<String, dynamic> json) =>
       longName: json['longName'] as String,
       sources:
           (json['sources'] as List<dynamic>).map((e) => e as String).toList(),
-      data:
-          (json['data'] as List<dynamic>)
+      priceData:
+          (json['priceData'] as List<dynamic>)
+              .map((e) => AmountEntry.fromJson(e as Map<String, dynamic>))
+              .toList(),
+      dividendData:
+          (json['dividendData'] as List<dynamic>)
               .map((e) => AmountEntry.fromJson(e as Map<String, dynamic>))
               .toList(),
       currency: json['currency'] as String,
@@ -171,7 +175,8 @@ Map<String, dynamic> _$CustomTickerResultToJson(CustomTickerResult instance) =>
       'shortName': instance.shortName,
       'longName': instance.longName,
       'sources': instance.sources,
-      'data': instance.data,
+      'priceData': instance.priceData,
+      'dividendData': instance.dividendData,
       'currency': instance.currency,
     };
 

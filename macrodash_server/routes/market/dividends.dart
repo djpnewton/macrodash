@@ -4,7 +4,7 @@ import 'package:macrodash_models/models.dart';
 
 import '_middleware.dart';
 
-final _log = Logger('market_futures');
+final _log = Logger('market_dividends');
 
 Future<Response> onRequest(RequestContext context) async {
   final dataDownloader = context.read<MarketData>();
@@ -12,12 +12,14 @@ Future<Response> onRequest(RequestContext context) async {
   final request = context.request;
   final params = request.uri.queryParameters;
 
-  // Parse the future parameter into the Futures enum
-  final futureParam = params['future']?.toLowerCase();
-  final future = Futures.values.firstWhere(
-    (r) => r.name.toLowerCase() == futureParam,
-    orElse: () => Futures.gold,
-  );
+  // Parse the ticker parameter
+  final ticker = params['ticker']?.toUpperCase();
+  if (ticker == null || ticker.isEmpty) {
+    return Response(
+      statusCode: 400,
+      body: 'Ticker parameter is required.',
+    );
+  }
 
   // Parse the range parameter into the DataRange enum
   final rangeParam = params['range']?.toLowerCase();
@@ -38,17 +40,17 @@ Future<Response> onRequest(RequestContext context) async {
     );
   }
 
-  final data = await dataDownloader.futureData(future, range);
+  final data = await dataDownloader.custom(ticker, null, range, null);
   if (data == null) {
-    return Response(statusCode: 500, body: 'Failed to fetch future data.');
+    return Response(statusCode: 500, body: 'Failed to fetch dividends data.');
   }
 
-  final description = futuresLabels[future];
+  final description = 'Dividends for $ticker (${data.currency})';
 
   final result = AmountSeries(
-    description: description ?? 'unknown future',
+    description: description,
     sources: const [MarketData.yahooSource],
-    data: data.priceData,
+    data: data.dividendData,
   );
 
   // Cache the response

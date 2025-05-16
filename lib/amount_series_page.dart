@@ -152,7 +152,7 @@ class _AmountSeriesPageState<T extends Enum, C extends Enum>
           _amountSeries = AmountSeries(
             description: result.value.longName,
             sources: result.value.sources,
-            data: result.value.data,
+            data: result.value.priceData,
           );
         case Error():
           // show snackbar

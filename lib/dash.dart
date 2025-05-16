@@ -302,7 +302,7 @@ class _DashCardState extends State<DashCard> {
   }
 
   List<Widget> _buildPriceWidgets(bool useColumn) {
-    final change24h = _calculateChange24h(_customTickerResult!.data);
+    final change24h = _calculateChange24h(_customTickerResult!.priceData);
     final isUp = change24h >= 0;
     final changeColor = isUp ? Colors.green : Colors.red;
     final changePrefix = isUp ? '+' : '';
@@ -317,7 +317,7 @@ class _DashCardState extends State<DashCard> {
           useColumn
               ? _rowText(
                 formatPrice(
-                  _customTickerResult!.data.last.amount,
+                  _customTickerResult!.priceData.last.amount,
                   currencyChar: '',
                   space: '',
                 ),
@@ -327,7 +327,7 @@ class _DashCardState extends State<DashCard> {
               )
               : _stackText(
                 formatPrice(
-                  _customTickerResult!.data.last.amount,
+                  _customTickerResult!.priceData.last.amount,
                   currencyChar: '',
                   space: '',
                 ),
@@ -382,7 +382,9 @@ class _DashCardState extends State<DashCard> {
 
   Widget _buildTickerCard(BuildContext context) {
     assert(_customTickerResult != null, 'Custom ticker result is null');
-    final sparklineData = _calculateSparklineValues(_customTickerResult!.data);
+    final sparklineData = _calculateSparklineValues(
+      _customTickerResult!.priceData,
+    );
     final useColumn = MediaQuery.of(context).size.width < 400;
 
     return Card(

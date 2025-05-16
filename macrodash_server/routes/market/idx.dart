@@ -68,7 +68,7 @@ Future<Response> onRequest(RequestContext context) async {
   final result = AmountSeries(
     description: description ?? 'unknown index',
     sources: const [MarketData.yahooSource],
-    data: data.data,
+    data: data.priceData,
   );
 
   // Cache the response

@@ -43,6 +43,8 @@ Future<Response> onRequest(RequestContext context) async {
   switch (region) {
     case BondRateRegion.usa:
       bondRateData = await dataDownloader.usBondRateData();
+    case BondRateRegion.japan:
+      bondRateData = await dataDownloader.japBondRateData();
   }
 
   if (bondRateData == null) {
@@ -57,6 +59,8 @@ Future<Response> onRequest(RequestContext context) async {
   switch (region) {
     case BondRateRegion.usa:
       sources = [SovData.usTreasurySource];
+    case BondRateRegion.japan:
+      sources = [SovData.japanMinFinanceSource];
   }
 
   final category = switch (term) {

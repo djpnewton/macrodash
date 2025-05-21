@@ -68,9 +68,12 @@ enum DebtRegion { usa, all }
 final debtRegionLabels = {DebtRegion.usa: 'USA', DebtRegion.all: 'All'};
 
 /// Enum to represent the region for Bond Rate data.
-enum BondRateRegion { usa }
+enum BondRateRegion { usa, japan }
 
-final bondRateRegionLabels = {BondRateRegion.usa: 'USA'};
+final bondRateRegionLabels = {
+  BondRateRegion.usa: 'USA',
+  BondRateRegion.japan: 'Japan',
+};
 
 /// Enum to represent the term of bond.
 enum BondTerm { thirtyYear, twentyYear, tenYear, fiveYear, oneYear }

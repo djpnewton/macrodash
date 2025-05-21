@@ -2,8 +2,8 @@ import 'package:dart_frog/dart_frog.dart';
 
 import 'package:macrodash_models/models.dart';
 
-const version = 10;
-const minClientVersion = 10;
+const version = 11;
+const minClientVersion = 11;
 
 Response onRequest(RequestContext context) {
   return Response.json(

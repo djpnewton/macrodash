@@ -36,6 +36,9 @@ class SovData extends AbstractDownloader {
   /// US Treasury data source
   static const String usTreasurySource = 'https://fiscaldata.treasury.gov/';
 
+  /// Bank of Japan data source
+  static const String japanMinFinanceSource = 'https://www.mof.go.jp';
+
   final String _fredApiKey;
   final Logger _log = Logger('SovData');
 
@@ -143,6 +146,18 @@ class SovData extends AbstractDownloader {
     final url =
         'https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/$year/all';
     return downloadFile(url, queryParameters);
+  }
+
+  Future<String?> _downloadJapBondRateDataCurrentMonth() async {
+    const url =
+        'https://www.mof.go.jp/english/policy/jgbs/reference/interest_rate/jgbcme.csv';
+    return downloadFile(url, {});
+  }
+
+  Future<String?> _downloadJapBondRateDataHistorical() async {
+    const url =
+        'https://www.mof.go.jp/english/policy/jgbs/reference/interest_rate/historical/jgbcme_all.csv';
+    return downloadFile(url, {});
   }
 
   /// Fetches and parses the Jap/US Dollar exchange rate
@@ -465,6 +480,115 @@ class SovData extends AbstractDownloader {
       }
     }
     _log.info('US Bond Rate data parsed successfully.');
+    return [
+      BondRateData(term: BondTerm.thirtyYear, data: bond30yData),
+      BondRateData(term: BondTerm.twentyYear, data: bond20yData),
+      BondRateData(term: BondTerm.tenYear, data: bond10yData),
+      BondRateData(term: BondTerm.fiveYear, data: bond5yData),
+      BondRateData(term: BondTerm.oneYear, data: bond1yData),
+    ];
+  }
+
+  /// Fetches and parses the JAPAN Bond Rate data into a list of AmountEntry
+  /// objects.
+  Future<List<BondRateData>?> japBondRateData() async {
+    final csvDataCurrent = await _downloadJapBondRateDataCurrentMonth();
+    if (csvDataCurrent == null) {
+      _log.warning('Failed to fetch JAPAN Bond Rate data.');
+      return null;
+    }
+    final csvDataHistorical = await _downloadJapBondRateDataHistorical();
+    if (csvDataHistorical == null) {
+      _log.warning('Failed to fetch JAPAN Bond Rate data.');
+      return null;
+    }
+    final bond30yData = <AmountEntry>[];
+    final bond20yData = <AmountEntry>[];
+    final bond10yData = <AmountEntry>[];
+    final bond5yData = <AmountEntry>[];
+    final bond1yData = <AmountEntry>[];
+    // Parse the CSV data
+    final rowsCurrent =
+        const CsvToListConverter().convert(csvDataCurrent, eol: '\n');
+    final rowsHistorical =
+        const CsvToListConverter().convert(csvDataHistorical, eol: '\n');
+    final headersCurrent = rowsCurrent.skip(1).first.cast<String>();
+    _log.info('CSV headers: $headersCurrent');
+    final dateIndex = headersCurrent.indexOf('Date');
+    final bond30yIndex = headersCurrent.indexOf('30Y');
+    final bond20yIndex = headersCurrent.indexOf('20Y');
+    final bond10yIndex = headersCurrent.indexOf('10Y');
+    final bond5yIndex = headersCurrent.indexOf('5Y');
+    final bond1yIndex = headersCurrent.indexOf('1Y');
+    if (dateIndex == -1 ||
+        bond30yIndex == -1 ||
+        bond20yIndex == -1 ||
+        bond10yIndex == -1 ||
+        bond5yIndex == -1 ||
+        bond1yIndex == -1) {
+      _log.warning(
+        'Required fields not found in the CSV.',
+      );
+      return null;
+    }
+    // Extract the data
+    for (final row in rowsHistorical.skip(2)) {
+      try {
+        // parse date in format YYYY/MM/DD
+        final date = DateFormat('yyyy/MM/dd').parse(row[dateIndex]!.toString());
+        final bond30y = double.tryParse(row[bond30yIndex]!.toString());
+        if (bond30y != null) {
+          bond30yData.add(AmountEntry(date: date, amount: bond30y));
+        }
+        final bond20y = double.tryParse(row[bond20yIndex]!.toString());
+        if (bond20y != null) {
+          bond20yData.add(AmountEntry(date: date, amount: bond20y));
+        }
+        final bond10y = double.tryParse(row[bond10yIndex]!.toString());
+        if (bond10y != null) {
+          bond10yData.add(AmountEntry(date: date, amount: bond10y));
+        }
+        final bond5y = double.tryParse(row[bond5yIndex]!.toString());
+        if (bond5y != null) {
+          bond5yData.add(AmountEntry(date: date, amount: bond5y));
+        }
+        final bond1y = double.tryParse(row[bond1yIndex]!.toString());
+        if (bond1y != null) {
+          bond1yData.add(AmountEntry(date: date, amount: bond1y));
+        }
+      } catch (e) {
+        _log.warning('Error parsing row: $row. Skipping. Error: $e');
+      }
+    }
+    for (final row in rowsCurrent.skip(2)) {
+      try {
+        // parse date in format YYYY/MM/DD
+        final date = DateFormat('yyyy/MM/dd').parse(row[dateIndex]!.toString());
+        final bond30y = double.tryParse(row[bond30yIndex]!.toString());
+        if (bond30y != null) {
+          bond30yData.add(AmountEntry(date: date, amount: bond30y));
+        }
+        final bond20y = double.tryParse(row[bond20yIndex]!.toString());
+        if (bond20y != null) {
+          bond20yData.add(AmountEntry(date: date, amount: bond20y));
+        }
+        final bond10y = double.tryParse(row[bond10yIndex]!.toString());
+        if (bond10y != null) {
+          bond10yData.add(AmountEntry(date: date, amount: bond10y));
+        }
+        final bond5y = double.tryParse(row[bond5yIndex]!.toString());
+        if (bond5y != null) {
+          bond5yData.add(AmountEntry(date: date, amount: bond5y));
+        }
+        final bond1y = double.tryParse(row[bond1yIndex]!.toString());
+        if (bond1y != null) {
+          bond1yData.add(AmountEntry(date: date, amount: bond1y));
+        }
+      } catch (e) {
+        _log.warning('Error parsing row: $row. Skipping. Error: $e');
+      }
+    }
+    _log.info('Jap Bond Rate data parsed successfully.');
     return [
       BondRateData(term: BondTerm.thirtyYear, data: bond30yData),
       BondRateData(term: BondTerm.twentyYear, data: bond20yData),

@@ -40,6 +40,7 @@ class TickerConfig extends StatefulWidget {
 class _TickerConfigState extends State<TickerConfig> {
   late DashTicker _ticker;
 
+  final titleController = TextEditingController();
   final controller1 = TextEditingController();
   final controller2 = TextEditingController();
   final SearchController searchController1 = SearchController();
@@ -49,6 +50,8 @@ class _TickerConfigState extends State<TickerConfig> {
   void initState() {
     super.initState();
     _ticker = widget.ticker;
+    titleController.text = _ticker.title ?? '';
+    titleController.addListener(_updateTicker);
     controller1.text = _ticker.ticker1;
     controller2.text = _ticker.ticker2 ?? '';
     searchController1.text = _ticker.ticker1;
@@ -61,6 +64,7 @@ class _TickerConfigState extends State<TickerConfig> {
 
   @override
   void dispose() {
+    titleController.dispose();
     controller1.dispose();
     controller2.dispose();
     searchController1.dispose();
@@ -73,6 +77,7 @@ class _TickerConfigState extends State<TickerConfig> {
     controller2.text = searchController2.text;
     setState(() {
       _ticker = DashTicker(
+        title: titleController.text.isEmpty ? null : titleController.text,
         ticker1: controller1.text,
         ticker2: controller2.text,
       );
@@ -86,6 +91,22 @@ class _TickerConfigState extends State<TickerConfig> {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          TextFormField(
+            controller: titleController,
+            decoration: InputDecoration(
+              labelText: 'Title',
+              suffixIcon: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    onPressed: () => titleController.clear(),
+                    icon: Icon(Icons.clear),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
           TextFormField(
             controller: controller1,
             readOnly: true,
@@ -400,14 +421,14 @@ class _DashCardState extends State<DashCard> {
               width: 100,
               height: 35,
               child: _stackText(
-                _customTickerResult!.shortName,
+                widget.ticker.title ?? _customTickerResult!.shortName,
                 16,
                 _customTickerResult!.longName,
                 8,
                 topWidget: TextButton(
                   onPressed: widget.onTitleTap,
                   child: Text(
-                    _customTickerResult!.shortName,
+                    widget.ticker.title ?? _customTickerResult!.shortName,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -558,7 +579,11 @@ class _DashPanelState extends State<DashPanel> {
                       context: context,
                       builder: (context) {
                         return TickerConfig(
-                          ticker: DashTicker(ticker1: '', ticker2: ''),
+                          ticker: DashTicker(
+                            title: null,
+                            ticker1: '',
+                            ticker2: '',
+                          ),
                           onSave: (ticker) {
                             setState(() {
                               _tickers = DashTickers(
@@ -590,6 +615,7 @@ class _DashPanelState extends State<DashPanel> {
               context.goNamed(
                 AppPage.ticker.name,
                 queryParameters: {
+                  'title': ticker.title ?? '',
                   'ticker1': ticker.ticker1,
                   'ticker2': ticker.ticker2 ?? '',
                 },

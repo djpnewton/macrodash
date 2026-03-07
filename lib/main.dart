@@ -35,9 +35,17 @@ void main() async {
 
 DashTicker _dashTicker(GoRouterState state) {
   // Load the ticker from the query parameters
+  final titleStr = state.uri.queryParameters['title'];
+  final title = titleStr != null && titleStr.isNotEmpty ? titleStr : null;
   final ticker1 = state.uri.queryParameters['ticker1'];
-  final ticker2 = state.uri.queryParameters['ticker2'];
-  return DashTicker(ticker1: ticker1 ?? 'SPY', ticker2: ticker2 ?? '');
+  final ticker2Str = state.uri.queryParameters['ticker2'];
+  final ticker2 =
+      ticker2Str != null && ticker2Str.isNotEmpty ? ticker2Str : null;
+  return DashTicker(
+    title: title,
+    ticker1: ticker1 ?? 'SPY',
+    ticker2: ticker2 ?? '',
+  );
 }
 
 String? _chartSetting(

@@ -405,10 +405,11 @@ class CustomTickerResult extends Equatable {
 
 @JsonSerializable()
 class DashTicker extends Equatable {
+  final String ? title;
   final String ticker1;
   final String? ticker2;
 
-  const DashTicker({required this.ticker1, required this.ticker2});
+  const DashTicker({required this.title, required this.ticker1, required this.ticker2});
 
   /// Creates an instance of [DashTicker] from a JSON map.
   factory DashTicker.fromJson(Map<String, dynamic> json) =>
@@ -418,7 +419,7 @@ class DashTicker extends Equatable {
   Map<String, dynamic> toJson() => _$DashTickerToJson(this);
 
   @override
-  List<Object?> get props => [ticker1, ticker2];
+  List<Object?> get props => [title, ticker1, ticker2];
 }
 
 @JsonSerializable()

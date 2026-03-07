@@ -62,10 +62,10 @@ class Settings {
   static DashTickers loadDashTickers(SharedPreferences prefs) {
     final defaultTickers = const DashTickers(
       tickers: [
-        DashTicker(ticker1: 'TSLA', ticker2: null),
-        DashTicker(ticker1: 'BTC-USD', ticker2: null),
-        DashTicker(ticker1: 'GC=F', ticker2: null),
-        DashTicker(ticker1: 'BTC-USD', ticker2: 'GC=F'),
+        DashTicker(title: 'Tesla', ticker1: 'TSLA', ticker2: null),
+        DashTicker(title: 'Bitcoin', ticker1: 'BTC-USD', ticker2: null),
+        DashTicker(title: 'Gold', ticker1: 'GC=F', ticker2: null),
+        DashTicker(title: 'BTC vs GLD', ticker1: 'BTC-USD', ticker2: 'GC=F'),
       ],
     );
     final value = prefs.getString('dash_tickers');

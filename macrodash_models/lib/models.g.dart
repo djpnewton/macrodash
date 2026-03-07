@@ -181,12 +181,17 @@ Map<String, dynamic> _$CustomTickerResultToJson(CustomTickerResult instance) =>
     };
 
 DashTicker _$DashTickerFromJson(Map<String, dynamic> json) => DashTicker(
+  title: json['title'] as String?,
   ticker1: json['ticker1'] as String,
   ticker2: json['ticker2'] as String?,
 );
 
 Map<String, dynamic> _$DashTickerToJson(DashTicker instance) =>
-    <String, dynamic>{'ticker1': instance.ticker1, 'ticker2': instance.ticker2};
+    <String, dynamic>{
+      'title': instance.title,
+      'ticker1': instance.ticker1,
+      'ticker2': instance.ticker2,
+    };
 
 DashTickers _$DashTickersFromJson(Map<String, dynamic> json) => DashTickers(
   tickers:

@@ -150,7 +150,7 @@ class _AmountSeriesPageState<T extends Enum, C extends Enum>
       switch (result) {
         case Ok():
           _amountSeries = AmountSeries(
-            description: result.value.longName,
+            description: widget.ticker!.title ?? result.value.longName,
             sources: result.value.sources,
             data: result.value.priceData,
           );
@@ -249,11 +249,9 @@ class _AmountSeriesPageState<T extends Enum, C extends Enum>
     final popouts = smallWidth || smallHeight;
     final optionsSide = smallHeight;
     final fullscreenButton = FullscreenButton();
-    final shareButton = ShareButton(
-      uri: GoRouterState.of(context).uri,
-      queryParams:
-          widget.ticker != null
+    final queryParams = widget.ticker != null
               ? {
+                'title': widget.ticker!.title ?? '',
                 'ticker1': widget.ticker!.ticker1,
                 'ticker2': widget.ticker!.ticker2 ?? '',
                 'zoom': _selectedZoom.name,
@@ -262,7 +260,11 @@ class _AmountSeriesPageState<T extends Enum, C extends Enum>
                 'region': _selectedRegion?.name ?? '',
                 'category': _selectedCategory?.name ?? '',
                 'zoom': _selectedZoom.name,
-              },
+              };
+    queryParams.removeWhere((key, value) => value.isEmpty);
+    final shareButton = ShareButton(
+      uri: GoRouterState.of(context).uri,
+      queryParams: queryParams,
     );
     final regionButtons =
         (widget.regions.isNotEmpty)

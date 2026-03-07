@@ -39,8 +39,13 @@ DashTicker _dashTicker(GoRouterState state) {
   final title = titleStr != null && titleStr.isNotEmpty ? titleStr : null;
   final ticker1 = state.uri.queryParameters['ticker1'];
   final ticker2Str = state.uri.queryParameters['ticker2'];
-  final ticker2 = ticker2Str != null && ticker2Str.isNotEmpty ? ticker2Str : null;
-  return DashTicker(title: title, ticker1: ticker1 ?? 'SPY', ticker2: ticker2 ?? '');
+  final ticker2 =
+      ticker2Str != null && ticker2Str.isNotEmpty ? ticker2Str : null;
+  return DashTicker(
+    title: title,
+    ticker1: ticker1 ?? 'SPY',
+    ticker2: ticker2 ?? '',
+  );
 }
 
 String? _chartSetting(

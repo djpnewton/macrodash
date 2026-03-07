@@ -579,7 +579,11 @@ class _DashPanelState extends State<DashPanel> {
                       context: context,
                       builder: (context) {
                         return TickerConfig(
-                          ticker: DashTicker(title: null, ticker1: '', ticker2: ''),
+                          ticker: DashTicker(
+                            title: null,
+                            ticker1: '',
+                            ticker2: '',
+                          ),
                           onSave: (ticker) {
                             setState(() {
                               _tickers = DashTickers(

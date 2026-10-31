@@ -43,27 +43,27 @@ class _SettingsPageState extends State<SettingsPage> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
-            RadioListTile<ChartLibrary>(
-              title: const Text('FL Chart'),
-              value: ChartLibrary.flChart,
+            RadioGroup<ChartLibrary>(
               groupValue: _selectedChartLibrary,
               onChanged: (value) {
+                if (value == null) return;
                 setState(() {
-                  _selectedChartLibrary = value!;
+                  _selectedChartLibrary = value;
                   _saveChartLibrary(value);
                 });
               },
-            ),
-            RadioListTile<ChartLibrary>(
-              title: const Text('Financial Chart'),
-              value: ChartLibrary.financialChart,
-              groupValue: _selectedChartLibrary,
-              onChanged: (value) {
-                setState(() {
-                  _selectedChartLibrary = value!;
-                  _saveChartLibrary(value);
-                });
-              },
+              child: const Column(
+                children: [
+                  RadioListTile<ChartLibrary>(
+                    title: Text('FL Chart'),
+                    value: ChartLibrary.flChart,
+                  ),
+                  RadioListTile<ChartLibrary>(
+                    title: Text('Financial Chart'),
+                    value: ChartLibrary.financialChart,
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 20),
             Text(

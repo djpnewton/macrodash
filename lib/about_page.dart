@@ -82,9 +82,12 @@ class _AboutPageState extends State<AboutPage> {
             if (_isLoading) ...[
               const CircularProgressIndicator(),
             ] else if (_versionInfo == null) ...[
-              const Text(
+              Text(
                 'Failed to load server version information.',
-                style: TextStyle(fontSize: 16, color: Colors.red),
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Theme.of(context).colorScheme.error,
+                ),
               ),
             ] else ...[
               Text(
@@ -101,9 +104,12 @@ class _AboutPageState extends State<AboutPage> {
                   child: const Text('Update'),
                 ),
               ] else ...[
-                const Text(
+                Text(
                   'A new version is available. Please update your client.',
-                  style: TextStyle(fontSize: 16, color: Colors.red),
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
                 ),
               ],
             ],

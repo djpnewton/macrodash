@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import 'settings.dart';
 import 'sparkline.dart';
+import 'theme.dart';
 import 'fixed_height_grid_delegate.dart';
 import 'ticker_search.dart';
 import 'api.dart';
@@ -277,7 +278,10 @@ class _DashCardState extends State<DashCard> {
         const SizedBox(width: 2),
         Text(
           bottom,
-          style: TextStyle(fontSize: fontSizeBottom, color: Colors.grey),
+          style: TextStyle(
+            fontSize: fontSizeBottom,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
       ],
     );
@@ -316,7 +320,10 @@ class _DashCardState extends State<DashCard> {
             alignment: Alignment.bottomCenter,
             child: Text(
               bottom,
-              style: TextStyle(fontSize: fontSizeBottom, color: Colors.grey),
+              style: TextStyle(
+                fontSize: fontSizeBottom,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
               maxLines: 1,
               softWrap: false,
               overflow: TextOverflow.ellipsis,
@@ -330,7 +337,8 @@ class _DashCardState extends State<DashCard> {
   List<Widget> _buildPriceWidgets(bool useColumn) {
     final change24h = _calculateChange24h(_customTickerResult!.priceData);
     final isUp = change24h >= 0;
-    final changeColor = isUp ? Colors.green : Colors.red;
+    final appColors = context.appColors;
+    final changeColor = isUp ? appColors.gain : appColors.loss;
     final changePrefix = isUp ? '+' : '';
     final boxWidth = useColumn ? 80.0 : 65.0;
     final boxHeight = useColumn ? 25.0 : 35.0;
@@ -458,6 +466,8 @@ class _DashCardState extends State<DashCard> {
                 painter: SparkPainter(
                   sparklineData.sparkline,
                   timestamps: sparklineData.sparklineTimestamps,
+                  colorUp: context.appColors.gain,
+                  colorDown: context.appColors.loss,
                 ),
               ),
             ),

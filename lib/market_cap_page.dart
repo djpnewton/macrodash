@@ -10,6 +10,7 @@ import 'api.dart';
 import 'option_buttons.dart';
 import 'result.dart';
 import 'sparkline.dart';
+import 'theme.dart';
 import 'picture_helper.dart';
 import 'settings.dart';
 import 'helper.dart';
@@ -98,17 +99,12 @@ class _MarketCapPageState extends State<MarketCapPage> {
   }
 
   Text _formatPriceChange(double priceChange) {
-    if (priceChange > 0) {
-      return Text(
-        '${priceChange.toStringAsFixed(2)}%',
-        style: TextStyle(color: Colors.green),
-      );
-    } else {
-      return Text(
-        '${priceChange.toStringAsFixed(2)}%',
-        style: TextStyle(color: Colors.red),
-      );
-    }
+    final appColors = context.appColors;
+    final color = priceChange > 0 ? appColors.gain : appColors.loss;
+    return Text(
+      '${priceChange.toStringAsFixed(2)}%',
+      style: TextStyle(color: color),
+    );
   }
 
   Widget _sparkline(
@@ -131,6 +127,8 @@ class _MarketCapPageState extends State<MarketCapPage> {
                 painter: SparkPainter(
                   _sparklineData[ticker]!.sparkline,
                   timestamps: _sparklineData[ticker]!.sparklineTimestamps,
+                  colorUp: context.appColors.gain,
+                  colorDown: context.appColors.loss,
                 ),
               ),
             );
@@ -158,7 +156,12 @@ class _MarketCapPageState extends State<MarketCapPage> {
         width: 100,
         height: 25,
         child: CustomPaint(
-          painter: SparkPainter(sparkline, timestamps: timestamps),
+          painter: SparkPainter(
+            sparkline,
+            timestamps: timestamps,
+            colorUp: context.appColors.gain,
+            colorDown: context.appColors.loss,
+          ),
         ),
       );
     }
@@ -262,7 +265,12 @@ class _MarketCapPageState extends State<MarketCapPage> {
                                   smallWidth
                                       ? Text(
                                         '${index + 1}',
-                                        style: TextStyle(color: Colors.grey),
+                                        style: TextStyle(
+                                          color:
+                                              Theme.of(
+                                                context,
+                                              ).colorScheme.onSurfaceVariant,
+                                        ),
                                       )
                                       : SizedBox(),
                                 ],

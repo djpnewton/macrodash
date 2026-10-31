@@ -1,11 +1,11 @@
 {
-    "name": "macrodash",
-    "short_name": "macrodash",
+    "name": "MacroDash",
+    "short_name": "MacroDash",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#071427",
+    "theme_color": "#0B1B33",
+    "description": "Macroeconomic dashboard",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

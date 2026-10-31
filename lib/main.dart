@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,6 +9,7 @@ import 'package:macrodash_models/models.dart';
 
 import 'config.dart';
 import 'settings.dart';
+import 'theme.dart';
 import 'amount_series_page.dart';
 import 'market_cap_page.dart';
 import 'settings_page.dart';
@@ -227,9 +229,9 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'MacroDash',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      themeMode: ThemeMode.system,
       routerConfig: _router,
     );
   }
@@ -292,8 +294,19 @@ class _MyHomePageState extends State<MyHomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SvgPicture.asset(
+              'assets/macrodash.svg',
+              width: 26,
+              height: 26,
+              semanticsLabel: 'MacroDash',
+            ),
+            const SizedBox(width: 10),
+            Text(widget.title),
+          ],
+        ),
         actions:
             isNarrow
                 ? null
@@ -328,11 +341,26 @@ class _MyHomePageState extends State<MyHomePage> {
           children: <Widget>[
             DrawerHeader(
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary,
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
               ),
-              child: const Text(
-                'Navigation',
-                style: TextStyle(color: Colors.white, fontSize: 24),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  SvgPicture.asset(
+                    'assets/macrodash.svg',
+                    width: 40,
+                    height: 40,
+                    semanticsLabel: 'MacroDash',
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Navigation',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontSize: 24,
+                    ),
+                  ),
+                ],
               ),
             ),
             ListTile(

@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 
 import 'package:macrodash_models/models.dart';
 
+import 'theme.dart';
+
 import 'option_buttons.dart';
 
 class VisFinancialChart extends StatefulWidget {
@@ -67,8 +69,9 @@ class _VisState extends State<VisFinancialChart> with TickerProviderStateMixin {
       top: 2,
       left: 2,
       child: Card(
-        // ignore: deprecated_member_use
-        color: Colors.white.withOpacity(0.8),
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.92),
         child: Padding(
           padding: const EdgeInsets.all(8.0),
           child: Column(
@@ -88,7 +91,10 @@ class _VisState extends State<VisFinancialChart> with TickerProviderStateMixin {
                   Text(
                     '${change.toStringAsFixed(2)} ($changePercentString%)',
                     style: TextStyle(
-                      color: change >= 0 ? Colors.green : Colors.red,
+                      color:
+                          change >= 0
+                              ? context.appColors.gain
+                              : context.appColors.loss,
                     ),
                   ),
                 ],
@@ -96,7 +102,10 @@ class _VisState extends State<VisFinancialChart> with TickerProviderStateMixin {
               ...?widget.dataSeries?.sources.map(
                 (source) => Text(
                   source,
-                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ),
             ],
@@ -108,7 +117,10 @@ class _VisState extends State<VisFinancialChart> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final theme = GThemeLight();
+    final theme =
+        Theme.of(context).brightness == Brightness.dark
+            ? GThemeDark()
+            : GThemeLight();
     final dataSource = _getDataSource();
     return Stack(
       children: [

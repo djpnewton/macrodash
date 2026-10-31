@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:macrodash_models/models.dart';
 import 'package:logging/logging.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import 'settings.dart';
 import 'sparkline.dart';
@@ -414,6 +415,170 @@ class _DashCardState extends State<DashCard> {
     }
   }
 
+  void _showLargeSparkline(
+    BuildContext context,
+    YahooSparklineData sparklineData,
+  ) {
+    assert(_customTickerResult != null, 'Custom ticker result is null');
+    final result = _customTickerResult!;
+    final change24h = _calculateChange24h(result.priceData);
+    final isUp = change24h >= 0;
+    final changeColor = isUp ? context.appColors.gain : context.appColors.loss;
+    final changePrefix = isUp ? '+' : '';
+    final colors = context.appColors;
+
+    // One grid line per day covered by the sparkline.
+    final values = sparklineData.sparkline;
+    final timestamps = sparklineData.sparklineTimestamps;
+    final dayFractions = <double>[];
+    final dayLabels = <String>[];
+    if (values.length > 1 && timestamps.length == values.length) {
+      final firstIndexByDay = <int, int>{};
+      for (var i = 0; i < timestamps.length; i++) {
+        final date = DateTime.fromMillisecondsSinceEpoch(timestamps[i]);
+        final day = DateTime(date.year, date.month, date.day);
+        firstIndexByDay.putIfAbsent(day.millisecondsSinceEpoch, () => i);
+      }
+      for (final entry in firstIndexByDay.entries) {
+        dayFractions.add(entry.value / (values.length - 1));
+        dayLabels.add(
+          DateFormat(
+            'E',
+          ).format(DateTime.fromMillisecondsSinceEpoch(entry.key)),
+        );
+      }
+    }
+
+    var maxValue = double.negativeInfinity;
+    var minValue = double.infinity;
+    for (final value in values) {
+      if (value == null) continue;
+      final amount = value.toDouble();
+      if (amount > maxValue) maxValue = amount;
+      if (amount < minValue) minValue = amount;
+    }
+    String? priceLabel(double value) =>
+        value.isFinite ? formatPrice(value, currencyChar: '', space: '') : null;
+
+    showDialog<void>(
+      context: context,
+      builder:
+          (dialogContext) => Dialog.fullscreen(
+            child: Scaffold(
+              appBar: AppBar(
+                leading: IconButton(
+                  icon: const Icon(Icons.close),
+                  tooltip: 'Close',
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                ),
+                title: Text(widget.ticker.title ?? result.shortName),
+              ),
+              body: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        result.longName,
+                        style: Theme.of(dialogContext).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Text(
+                            formatPrice(
+                              result.priceData.last.amount,
+                              currencyChar: '',
+                              space: '',
+                            ),
+                            style:
+                                Theme.of(dialogContext).textTheme.headlineSmall,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            result.currency,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color:
+                                  Theme.of(
+                                    dialogContext,
+                                  ).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            '$changePrefix${change24h.toStringAsFixed(2)}%',
+                            style: TextStyle(fontSize: 16, color: changeColor),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '24h',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color:
+                                  Theme.of(
+                                    dialogContext,
+                                  ).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: SizedBox.expand(
+                          child: CustomPaint(
+                            painter: SparkChartPainter(
+                              values,
+                              timestamps: timestamps,
+                              colorUp: colors.gain,
+                              colorDown: colors.loss,
+                              strokeWidth: 2,
+                              fillOpacity: 0.2,
+                              dayFractions: dayFractions,
+                              dayLabels: dayLabels,
+                              topLabel: priceLabel(maxValue),
+                              bottomLabel: priceLabel(minValue),
+                              gridColor:
+                                  Theme.of(
+                                    dialogContext,
+                                  ).colorScheme.outlineVariant,
+                              labelStyle: TextStyle(
+                                fontSize: 11,
+                                color:
+                                    Theme.of(
+                                      dialogContext,
+                                    ).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          'Last 7 days',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color:
+                                Theme.of(
+                                  dialogContext,
+                                ).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+    );
+  }
+
   Widget _buildTickerCard(BuildContext context) {
     assert(_customTickerResult != null, 'Custom ticker result is null');
     final sparklineData = _calculateSparklineValues(
@@ -459,15 +624,21 @@ class _DashCardState extends State<DashCard> {
             const SizedBox(width: 4),
             Expanded(child: SizedBox()),
             // Sparkline
-            SizedBox(
-              width: 110,
-              height: 25,
-              child: CustomPaint(
-                painter: SparkPainter(
-                  sparklineData.sparkline,
-                  timestamps: sparklineData.sparklineTimestamps,
-                  colorUp: context.appColors.gain,
-                  colorDown: context.appColors.loss,
+            Tooltip(
+              message: 'Show larger chart',
+              child: InkWell(
+                onTap: () => _showLargeSparkline(context, sparklineData),
+                child: SizedBox(
+                  width: 110,
+                  height: 25,
+                  child: CustomPaint(
+                    painter: SparkPainter(
+                      sparklineData.sparkline,
+                      timestamps: sparklineData.sparklineTimestamps,
+                      colorUp: context.appColors.gain,
+                      colorDown: context.appColors.loss,
+                    ),
+                  ),
                 ),
               ),
             ),

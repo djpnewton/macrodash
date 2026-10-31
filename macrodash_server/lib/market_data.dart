@@ -53,6 +53,9 @@ class MarketData extends AbstractDownloader {
   /// CoinGecko data source
   static const String coinGeckoSource = 'https://www.coingecko.com/';
 
+  /// TradingView data source
+  static const String tradingViewSource = 'https://www.tradingview.com/';
+
   static const int _goldOunces = 216_265 *
       35274; // tons to ounces -  https://www.gold.org/goldhub/data/how-much-gold
   static const int _silverOunces = 1_600_000 *
@@ -393,7 +396,7 @@ class MarketData extends AbstractDownloader {
             price: (e['current_price'] as num).toDouble(),
             // ignore: avoid_dynamic_calls
             sparkline: (e['sparkline_in_7d']['price'] as List<dynamic>)
-                .map((e) => e as double)
+                .map((value) => (value as num).toDouble())
                 .toList(),
             // ignore: avoid_dynamic_calls
             high24h: (e['high_24h'] as num?)?.toDouble() ?? 0,
@@ -418,20 +421,26 @@ class MarketData extends AbstractDownloader {
         .toList();
   }
 
-  double _parseTVAmount(String amountStr) {
-    // Parse the market cap string into a double
-    if (amountStr.endsWith('T')) {
-      return double.parse(amountStr.substring(0, amountStr.length - 1)) *
-          1_000_000_000_000;
-    } else if (amountStr.endsWith('B')) {
-      return double.parse(amountStr.substring(0, amountStr.length - 1)) *
-          1_000_000_000;
-    } else if (amountStr.endsWith('M')) {
-      return double.parse(amountStr.substring(0, amountStr.length - 1)) *
-          1_000_000;
-    } else {
-      return double.parse(amountStr.replaceAll(',', ''));
+  double? _parseTVAmount(String amountStr) {
+    // TradingView renders values like "5.03 T USD"; ignore the currency and
+    // scale by the magnitude suffix.
+    final normalized = amountStr.replaceAll('\u00A0', ' ').trim();
+    final match = RegExp(
+      r'^([+-]?\d[\d,]*(?:\.\d+)?)\s*([TBMK])?',
+      caseSensitive: false,
+    ).firstMatch(normalized);
+    if (match == null) {
+      return null;
     }
+    final value = double.parse(match.group(1)!.replaceAll(',', ''));
+    final multiplier = switch (match.group(2)?.toUpperCase()) {
+      'T' => 1_000_000_000_000,
+      'B' => 1_000_000_000,
+      'M' => 1_000_000,
+      'K' => 1_000,
+      _ => 1,
+    };
+    return value * multiplier;
   }
 
   double _parseTVPriceChange(String priceChangeStr) {
@@ -577,8 +586,7 @@ class MarketData extends AbstractDownloader {
     // Parse the data into a list of MarketOverviewEntry objects
     final document = parse(data);
     final entries = <MarketOverviewEntry>[];
-    // Find the table with the class 'table-Ngq2xrcG'
-    final table = document.querySelector('.table-Ngq2xrcG');
+    final table = document.querySelector('table');
     if (table == null) {
       _log.warning('Failed to find stocks table');
       return null;
@@ -592,27 +600,31 @@ class MarketData extends AbstractDownloader {
         continue; // Skip rows with less than 5 cells
       }
       // Get the ticker symbol from the first cell
+      if (cells[0].children.isEmpty) {
+        continue;
+      }
       final tickerCell = cells[0].children[0];
       if (!tickerCell.className.startsWith('tickerCell')) {
         continue; // Skip rows without a ticker cell
       }
-      if (tickerCell.children.length < 3) {
-        continue; // Skip rows without sufficient ticker cell children
+      final links = tickerCell.querySelectorAll('a');
+      if (links.isEmpty) {
+        continue;
       }
-      final link = tickerCell.children[2];
-      final ticker = link.text.trim();
-      final sup = tickerCell.children[3];
-      final name = sup.text.trim();
+      final ticker = links.first.text.trim();
+      final name = links.length > 1 ? links[1].text.trim() : ticker;
       // get the market cap from the third cell
-      final marketCapCell = cells[2];
-      marketCapCell.children[0].remove();
-      final marketCapStr = marketCapCell.text.trim();
-      final marketCap = _parseTVAmount(marketCapStr);
+      final marketCap = _parseTVAmount(cells[2].text);
+      if (marketCap == null) {
+        _log.warning('Failed to parse market cap for $ticker');
+        continue;
+      }
       // get price from the fourth cell
-      final priceCell = cells[3];
-      priceCell.children[0].remove();
-      final priceStr = priceCell.text.trim();
-      final price = _parseTVAmount(priceStr);
+      final price = _parseTVAmount(cells[3].text);
+      if (price == null) {
+        _log.warning('Failed to parse price for $ticker');
+        continue;
+      }
       // get the price change percent from the fifth cell
       final priceChangeStr = cells[4].text.trim();
       if (priceChangeStr == '—') {
@@ -684,6 +696,7 @@ class MarketData extends AbstractDownloader {
         sources = [
           MarketData.yahooSource,
           MarketData.coinGeckoSource,
+          MarketData.tradingViewSource,
         ];
       case MarketCategory.metals:
         // Fetch and parse data for metals
@@ -717,7 +730,7 @@ class MarketData extends AbstractDownloader {
           return null;
         }
         description = 'Stocks';
-        sources = ['TODO'];
+        sources = [MarketData.tradingViewSource];
     }
     // Combine all data into a single list
     // and sort the data by market cap in descending order

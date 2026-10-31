@@ -8,6 +8,81 @@ import 'theme.dart';
 
 import 'option_buttons.dart';
 
+/// A chart theme built from the app's Material theme so the chart blends into
+/// the surrounding surface instead of the preset's black/white panel.
+GTheme _chartTheme(ThemeData appTheme) {
+  final scheme = appTheme.colorScheme;
+  final isDark = appTheme.brightness == Brightness.dark;
+  final base = isDark ? GThemeDark() : GThemeLight();
+
+  final gridColor = scheme.outlineVariant;
+  final lineColor = scheme.primary;
+  final axisLabelTheme = GAxisLabelTheme(
+    labelStyle: LabelStyle(
+      textStyle: TextStyle(color: scheme.onSurfaceVariant, fontSize: 10),
+      backgroundStyle: PaintStyle(),
+      backgroundPadding: const EdgeInsets.all(2),
+      backgroundCornerRadius: 2,
+    ),
+  );
+  final markerTheme = GAxisMarkerTheme(
+    labelTheme: GAxisLabelTheme(
+      labelStyle: LabelStyle(
+        textStyle: TextStyle(color: scheme.onPrimary, fontSize: 10),
+        backgroundStyle: PaintStyle(fillColor: scheme.primary),
+        backgroundPadding: const EdgeInsets.all(2),
+        backgroundCornerRadius: 2,
+      ),
+    ),
+    rangeStyle: PaintStyle(fillColor: scheme.primary.withValues(alpha: 0.6)),
+  );
+
+  return base.extend(
+    name: 'macrodash-${appTheme.brightness.name}',
+    backgroundTheme: GBackgroundTheme(
+      style: PaintStyle(fillColor: scheme.surface),
+    ),
+    panelTheme: GPanelTheme(
+      style: PaintStyle(
+        fillColor: scheme.surface,
+        strokeColor: gridColor,
+        strokeWidth: 0.5,
+      ),
+    ),
+    pointAxisTheme: base.pointAxisTheme.copyWith(
+      lineStyle: PaintStyle(strokeColor: gridColor, strokeWidth: 1),
+      tickerStyle: PaintStyle(strokeColor: gridColor, strokeWidth: 1),
+      labelTheme: axisLabelTheme,
+    ),
+    valueAxisTheme: base.valueAxisTheme.copyWith(
+      lineStyle: PaintStyle(strokeColor: gridColor, strokeWidth: 1),
+      tickerStyle: PaintStyle(strokeColor: gridColor, strokeWidth: 1),
+      labelTheme: axisLabelTheme,
+    ),
+    crosshairTheme: base.crosshairTheme.copyWith(
+      lineStyle: PaintStyle(
+        strokeColor: scheme.outline,
+        strokeWidth: 1,
+        dash: const [5, 5],
+      ),
+      pointLabelTheme: markerTheme.labelTheme,
+      valueLabelTheme: markerTheme.labelTheme,
+    ),
+    axisMarkerTheme: markerTheme,
+    graphThemes: {
+      GGraph.typeName: GGraphTheme(axisMarkerTheme: markerTheme),
+      GGraphGrids.typeName: GGraphGridsTheme(
+        lineStyle: PaintStyle(strokeColor: gridColor, strokeWidth: 0.5),
+      ),
+      GGraphLine.typeName: GGraphLineTheme(
+        lineStyle: PaintStyle(strokeColor: lineColor, strokeWidth: 1.5),
+        pointStyle: PaintStyle(fillColor: lineColor),
+        axisMarkerTheme: markerTheme,
+      ),
+    },
+  );
+}
+
 class VisFinancialChart extends StatefulWidget {
   final List<AmountEntry> filteredData;
   final AmountSeries? dataSeries;
@@ -117,10 +192,7 @@ class _VisState extends State<VisFinancialChart> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final theme =
-        Theme.of(context).brightness == Brightness.dark
-            ? GThemeDark()
-            : GThemeLight();
+    final theme = _chartTheme(Theme.of(context));
     final dataSource = _getDataSource();
     return Stack(
       children: [
@@ -134,6 +206,10 @@ class _VisState extends State<VisFinancialChart> with TickerProviderStateMixin {
             pointViewPort: GPointViewPort(
               initialStartPoint: dataSource.firstPoint - 1,
               initialEndPoint: dataSource.lastPoint + 1,
+              // Keep the whole data range visible when the widget is laid out
+              // at its real size; the default (keepEnd) keeps the point width
+              // from the initial 500px area and pads the left side instead.
+              resizeMode: GViewPortResizeMode.keepRange,
               autoScaleStrategy: null,
             ),
 

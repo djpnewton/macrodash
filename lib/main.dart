@@ -31,6 +31,7 @@ void main() async {
 
   WidgetsFlutterBinding.ensureInitialized();
   _prefs = await SharedPreferences.getInstance();
+  themeModeNotifier.value = Settings.loadThemeMode(_prefs!);
   log.info('SharedPreferences initialized');
   runApp(const MyApp());
 }
@@ -227,12 +228,16 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'MacroDash',
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      themeMode: ThemeMode.system,
-      routerConfig: _router,
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeModeNotifier,
+      builder:
+          (context, themeMode, _) => MaterialApp.router(
+            title: 'MacroDash',
+            theme: AppTheme.light(),
+            darkTheme: AppTheme.dark(),
+            themeMode: themeMode,
+            routerConfig: _router,
+          ),
     );
   }
 }

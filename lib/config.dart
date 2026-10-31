@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 /// The git SHA of source of the current build
 const String gitSha = 'GIT_SHA_REPLACE';
 
@@ -19,6 +21,9 @@ String get resolvedLinkPreviewUrl =>
 
 /// Client version, used to ensure we match the servers api version
 const int clientVersion = 11;
+
+/// Theme mode used until one is chosen in settings.
+const ThemeMode defaultThemeMode = ThemeMode.system;
 
 /// The different pages of the app
 enum AppPage {

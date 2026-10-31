@@ -1,12 +1,21 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:macrodash_models/models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'config.dart';
+
 enum ChartLibrary { flChart, financialChart }
+
+/// Current theme mode, observed by the app root and updated from settings.
+final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier<ThemeMode>(
+  defaultThemeMode,
+);
 
 class Settings {
   static const String _chartLibraryKey = 'chartLibrary_b2';
+  static const String _themeModeKey = 'themeMode';
 
   static Future<SharedPreferences> getPrefs() async {
     return await SharedPreferences.getInstance();
@@ -27,6 +36,22 @@ class Settings {
     return ChartLibrary.values.firstWhere(
       (e) => e.name == value,
       orElse: () => ChartLibrary.flChart,
+    );
+  }
+
+  /// Saves the selected theme mode to shared preferences.
+  static Future<void> saveThemeMode(ThemeMode themeMode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_themeModeKey, themeMode.name);
+  }
+
+  /// Loads the selected theme mode from shared preferences.
+  /// Defaults to [defaultThemeMode] if no value is stored.
+  static ThemeMode loadThemeMode(SharedPreferences prefs) {
+    final value = prefs.getString(_themeModeKey);
+    return ThemeMode.values.firstWhere(
+      (mode) => mode.name == value,
+      orElse: () => defaultThemeMode,
     );
   }
 

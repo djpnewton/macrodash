@@ -31,35 +31,10 @@ Future<Response> onRequest(RequestContext context) async {
     );
   }
 
-  // Fetch data based on the region
-  List<AmountEntry>? debtData;
-  switch (region) {
-    case DebtRegion.usa:
-    case DebtRegion.all:
-      debtData = await dataDownloader.usDebtData();
-  }
-
-  if (debtData == null) {
+  final result = await dataDownloader.debtSeries(region);
+  if (result == null) {
     return Response(statusCode: 500, body: 'Failed to fetch debt data.');
   }
-
-  List<String> sources;
-  switch (region) {
-    case DebtRegion.all:
-    case DebtRegion.usa:
-      sources = [SovData.usTreasurySource];
-  }
-
-  final regionDescription = switch (region) {
-    DebtRegion.usa => 'USA',
-    DebtRegion.all => 'All Regions (USA)',
-  };
-
-  final result = AmountSeries(
-    description: 'Public Debt - $regionDescription - Trillions of Dollars',
-    sources: sources,
-    data: debtData,
-  );
 
   // Cache the response
   final resultJson = result.toJson();

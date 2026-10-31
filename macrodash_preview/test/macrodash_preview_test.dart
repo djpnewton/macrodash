@@ -70,9 +70,9 @@ void main() {
     });
   });
 
-  group('TickerPreviewData', () {
+  group('PreviewData', () {
     test('keeps only the requested window and reports the change', () {
-      final data = TickerPreviewData.fromTicker(
+      final data = PreviewData.fromTicker(
         ticker(points: 24 * 10),
         title: 'Gold',
         days: 7,
@@ -80,7 +80,7 @@ void main() {
 
       expect(data.title, 'Gold');
       expect(data.subtitle, 'Gold Dec 26');
-      expect(data.currency, 'USD');
+      expect(data.unit, 'USD');
       // The window covers the last 7 days; the plotted span is 6d of points.
       expect(data.series.length, lessThanOrEqualTo(7 * 24 + 1));
       expect(data.isGain, isTrue);
@@ -99,11 +99,11 @@ void main() {
         dividendData: const [],
         currency: 'USD',
       );
-      expect(TickerPreviewData.fromTicker(result).subtitle, 'BTC-USD / GC=F');
+      expect(PreviewData.fromTicker(result).subtitle, 'BTC-USD / GC=F');
     });
 
     test('downsamples long series', () {
-      final data = TickerPreviewData.fromTicker(ticker(points: 5000));
+      final data = PreviewData.fromTicker(ticker(points: 5000));
       expect(data.series.length, lessThanOrEqualTo(240));
     });
 
@@ -130,7 +130,7 @@ void main() {
         currency: 'USD',
       );
 
-      final data = TickerPreviewData.fromTicker(sparse);
+      final data = PreviewData.fromTicker(sparse);
       expect(data.series.length, greaterThan(2), reason: 'chart needs a curve');
       expect(data.windowLabel, endsWith('y'));
       expect(data.change, isNot('+0.00%'));
@@ -143,9 +143,113 @@ void main() {
     });
   });
 
+  group('page URLs', () {
+    test('pageShareUrl puts the page in the path', () {
+      expect(
+        pageShareUrl(
+          previewUrl: 'https://ln.macrodash.me/',
+          page: 'm2',
+          params: {'region': 'usa', 'zoom': 'oneYear'},
+        ),
+        'https://ln.macrodash.me/p/m2?region=usa&zoom=oneYear',
+      );
+    });
+
+    test('pageAppUrl keeps the app hash route', () {
+      expect(
+        pageAppUrl(
+          appUrl: 'https://macrodash.me',
+          page: 'bondRates',
+          params: {'category': 'tenYear'},
+        ),
+        'https://macrodash.me/#/bondRates?category=tenYear',
+      );
+    });
+
+    test('recognises previewable pages case-insensitively', () {
+      expect(isPreviewPage('m2'), isTrue);
+      expect(isPreviewPage('marketCap'), isTrue);
+      expect(isPreviewPage('settings'), isFalse);
+    });
+  });
+
+  group('PreviewData.fromSeries', () {
+    test('reports the value, unit and change over the range', () {
+      final data = PreviewData.fromSeries(
+        title: 'M2 Money Supply',
+        subtitle: 'USA',
+        data: [
+          for (var i = 0; i < 24; i++)
+            AmountEntry(
+              date: DateTime(2025, 1 + i, 1),
+              amount: 20 + i.toDouble(),
+            ),
+        ],
+        unit: 'T USD',
+        range: DataRange.oneYear,
+      );
+
+      expect(data.title, 'M2 Money Supply');
+      expect(data.unit, 'T USD');
+      expect(data.value, '43.00');
+      expect(data.change, startsWith('+'));
+      expect(data.change, endsWith('%'));
+      expect(data.series.length, greaterThan(2));
+      expect(data.windowLabel, isNotEmpty);
+      expect(data.isGain, isTrue);
+    });
+
+    test('reports bond rate changes in points', () {
+      final data = PreviewData.fromSeries(
+        title: 'Bond Rates',
+        subtitle: 'USA',
+        data: [
+          AmountEntry(date: DateTime(2025, 1), amount: 4.0),
+          AmountEntry(date: DateTime(2025, 6), amount: 4.25),
+        ],
+        unit: '%',
+        changeMode: PreviewChangeMode.points,
+      );
+
+      expect(data.change, '+0.25 pts');
+    });
+  });
+
+  group('PreviewData.fromMarketCap', () {
+    test('totals the caps and ranks the bars', () {
+      MarketOverviewEntry entry(String ticker, double cap) =>
+          MarketOverviewEntry(
+            supply: 0,
+            price: 1,
+            high24h: 0,
+            low24h: 0,
+            priceChangePercent24h: 0,
+            marketCap: cap,
+            ticker: ticker,
+            name: ticker,
+            image: null,
+            type: MarketCategory.crypto,
+            moreInfoLink: null,
+          );
+
+      final data = PreviewData.fromMarketCap(
+        title: 'Market Caps',
+        subtitle: 'All',
+        entries: [entry('btc', 2e12), entry('eth', 5e11), entry('aapl', 1e12)],
+        maxBars: 2,
+      );
+
+      expect(data.value, '\$3.50T');
+      expect(data.bars.length, 2);
+      expect(data.bars.first.label, 'BTC');
+      expect(data.bars.first.valueLabel, '\$2.00T');
+      expect(data.series, isEmpty);
+    });
+  });
+
   test('renders a png', () async {
-    final png = await renderTickerPreviewPng(
-      TickerPreviewData.fromTicker(ticker(), title: 'Gold'),
+    final png = await renderPreviewPng(
+      PreviewData.fromTicker(ticker(), title: 'Gold'),
     );
 
     expect(png.length, greaterThan(1000));
@@ -159,5 +263,20 @@ void main() {
       26,
       10,
     ], reason: 'PNG signature');
+  });
+  test('renders a bar-chart png', () async {
+    final png = await renderPreviewPng(
+      const PreviewData(
+        title: 'Market Caps',
+        subtitle: 'All',
+        value: '\$3.50T',
+        bars: [
+          PreviewBar(label: 'BTC', value: 2, valueLabel: '\$2.00T'),
+          PreviewBar(label: 'ETH', value: 1, valueLabel: '\$1.00T'),
+        ],
+      ),
+    );
+
+    expect(png.length, greaterThan(1000));
   });
 }

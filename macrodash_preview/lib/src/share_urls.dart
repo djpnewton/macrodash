@@ -35,6 +35,44 @@ String tickerShareUrl({
   return query.isEmpty ? base : '$base?$query';
 }
 
+/// App route names that have a server-rendered link preview, e.g. "m2".
+const previewPageNames = {
+  'm2',
+  'debt',
+  'bondrates',
+  'indices',
+  'futures',
+  'marketcap',
+};
+
+/// Whether [page] (an app route name) has a link preview.
+bool isPreviewPage(String page) =>
+    previewPageNames.contains(page.toLowerCase());
+
+/// The in-app URL for a non-ticker page, e.g.
+/// `https://macrodash.me/#/m2?region=usa&zoom=oneYear`.
+String pageAppUrl({
+  required String appUrl,
+  required String page,
+  Map<String, String> params = const {},
+}) {
+  final query = _query(params);
+  final path = '/#/${Uri.encodeComponent(page)}';
+  return '${_trimSlashes(appUrl)}$path${query.isEmpty ? '' : '?$query'}';
+}
+
+/// The shareable preview URL for a page, e.g.
+/// `https://ln.macrodash.me/p/m2?region=usa&zoom=oneYear`.
+String pageShareUrl({
+  required String previewUrl,
+  required String page,
+  Map<String, String> params = const {},
+}) {
+  final base = '${_trimSlashes(previewUrl)}/p/${Uri.encodeComponent(page)}';
+  final query = _query(params);
+  return query.isEmpty ? base : '$base?$query';
+}
+
 String _query(Map<String, String> params) {
   final keys = params.keys.where((k) => params[k]!.isNotEmpty).toList()..sort();
   return keys

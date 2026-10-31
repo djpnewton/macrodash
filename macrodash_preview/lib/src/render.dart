@@ -15,8 +15,8 @@ const int defaultPreviewHeight = 630;
 /// Pure Dart (no Flutter), so the same code renders on the server and in the
 /// app. The in-memory canvas only supports bitmap fonts (arial 14/24/48) and
 /// stroked paths, so everything here is built from those primitives.
-Future<Uint8List> renderTickerPreviewPng(
-  TickerPreviewData data, {
+Future<Uint8List> renderPreviewPng(
+  PreviewData data, {
   int width = defaultPreviewWidth,
   int height = defaultPreviewHeight,
 }) async {
@@ -42,7 +42,7 @@ PColor _blend(int background, int foreground, double amount) {
 class _TickerPreviewPainter extends PCanvasPainter {
   _TickerPreviewPainter(this.data);
 
-  final TickerPreviewData data;
+  final PreviewData data;
 
   static final _ink = _color(MacroDashPalette.ink);
   static final _muted = _color(MacroDashPalette.muted);
@@ -67,7 +67,11 @@ class _TickerPreviewPainter extends PCanvasPainter {
 
     _paintMark(canvas, 80, 74, 96);
     _paintHeader(canvas);
-    _paintChart(canvas, left: 150, top: 318, right: width - 80, bottom: 540);
+    if (data.bars.isNotEmpty) {
+      _paintBars(canvas, left: 150, top: 318, right: width - 80, bottom: 540);
+    } else {
+      _paintChart(canvas, left: 150, top: 318, right: width - 80, bottom: 540);
+    }
     _paintFooter(canvas, height);
 
     return true;
@@ -96,12 +100,12 @@ class _TickerPreviewPainter extends PCanvasPainter {
     canvas.drawText(data.title, left, 112, large, PStyle(color: _ink));
     canvas.drawText(data.subtitle, left, 172, small, PStyle(color: _muted));
 
-    canvas.drawText(data.price, left, 208, large, PStyle(color: _ink));
-    final priceWidth = canvas.measureText(data.price, large).actualWidth;
+    canvas.drawText(data.value, left, 208, large, PStyle(color: _ink));
+    final valueWidth = canvas.measureText(data.value, large).actualWidth;
 
     final currencyFont = PFont('Arial', 24);
     final changeFont = PFont('Arial', 24, bold: true);
-    final currencyX = left + priceWidth + 12;
+    var nextX = left + valueWidth + 12;
     final changeColor = _color(
       data.isGain ? MacroDashPalette.emerald300 : MacroDashPalette.loss,
     );
@@ -114,15 +118,70 @@ class _TickerPreviewPainter extends PCanvasPainter {
       canvas.drawText(text, x, baseline - height, font, PStyle(color: color));
     }
 
-    drawAligned(data.currency, currencyX, currencyFont, _muted);
-    final currencyWidth =
-        canvas.measureText(data.currency, currencyFont).actualWidth;
-    drawAligned(
-      '${data.change} (${data.windowLabel})',
-      currencyX + currencyWidth + 26,
-      changeFont,
-      changeColor,
+    if (data.unit.isNotEmpty) {
+      drawAligned(data.unit, nextX, currencyFont, _muted);
+      nextX += canvas.measureText(data.unit, currencyFont).actualWidth + 26;
+    }
+    if (data.change.isNotEmpty) {
+      final change =
+          data.windowLabel.isEmpty
+              ? data.change
+              : '${data.change} (${data.windowLabel})';
+      drawAligned(change, nextX, changeFont, changeColor);
+    }
+  }
+
+  /// Horizontal bars for list previews (market caps), one row per bar.
+  void _paintBars(
+    PCanvas canvas, {
+    required double left,
+    required double top,
+    required double right,
+    required double bottom,
+  }) {
+    final bars = data.bars;
+    final maxValue = bars.fold<double>(
+      0,
+      (max, bar) => math.max(max, bar.value),
     );
+    if (bars.isEmpty || maxValue <= 0) return;
+
+    final rowHeight = (bottom - top) / bars.length;
+    final barHeight = math.min(rowHeight * 0.55, 34.0);
+    final barRight = right - 130;
+    final labelFont = PFont('Arial', 24);
+    final valueFont = PFont('Arial', 14);
+    final barColor = _color(MacroDashPalette.emerald500);
+
+    for (var i = 0; i < bars.length; i++) {
+      final bar = bars[i];
+      final y = top + i * rowHeight + (rowHeight - barHeight) / 2;
+      final barWidth = (barRight - left) * (bar.value / maxValue);
+      canvas.fillRect(
+        left,
+        y,
+        barWidth < 1 ? 1.0 : barWidth,
+        barHeight,
+        PStyle(color: barColor),
+      );
+
+      final labelWidth = canvas.measureText(bar.label, labelFont).actualWidth;
+      final labelHeight = canvas.measureText(bar.label, labelFont).actualHeight;
+      canvas.drawText(
+        bar.label,
+        left - 12 - labelWidth,
+        y + (barHeight - labelHeight) / 2,
+        labelFont,
+        PStyle(color: _ink),
+      );
+      canvas.drawText(
+        bar.valueLabel,
+        left + barWidth + 10,
+        y + barHeight / 2 - 7,
+        valueFont,
+        PStyle(color: _muted),
+      );
+    }
   }
 
   void _paintChart(
@@ -161,32 +220,60 @@ class _TickerPreviewPainter extends PCanvasPainter {
     double xFor(int index) =>
         left + (right - left) * index / (series.length - 1);
 
-    // One vertical line per day, labelled with the weekday. The first day sits
-    // on the left axis, so it gets no line or label of its own.
-    final firstIndexByDay = <String, int>{};
-    for (var i = 0; i < series.length; i++) {
-      final day = DateFormat('yyyy-MM-dd').format(series[i].time);
-      firstIndexByDay.putIfAbsent(day, () => i);
-    }
     final dayFont = PFont('Arial', 14);
-    for (final entry in firstIndexByDay.entries) {
-      if (entry.value == 0) continue;
-      final x = xFor(entry.value);
-      canvas.strokePath([
-        Point(x, top),
-        Point(x, bottom),
-      ], PStyle(color: _grid));
-      final label = DateFormat('E').format(series[entry.value].time);
-      final labelWidth = canvas.measureText(label, dayFont).actualWidth;
-      final labelLeft = x - labelWidth / 2;
-      if (labelLeft < left) continue;
-      canvas.drawText(
-        label,
-        labelLeft,
-        bottom + 6,
-        dayFont,
-        PStyle(color: _muted),
-      );
+    final spanDays = series.last.time.difference(series.first.time).inDays;
+    if (spanDays <= 31) {
+      // Short windows: one vertical line per day, labelled with the weekday.
+      // The first day sits on the left axis, so it gets no line or label.
+      final firstIndexByDay = <String, int>{};
+      for (var i = 0; i < series.length; i++) {
+        final day = DateFormat('yyyy-MM-dd').format(series[i].time);
+        firstIndexByDay.putIfAbsent(day, () => i);
+      }
+      for (final entry in firstIndexByDay.entries) {
+        if (entry.value == 0) continue;
+        final x = xFor(entry.value);
+        canvas.strokePath([
+          Point(x, top),
+          Point(x, bottom),
+        ], PStyle(color: _grid));
+        final label = DateFormat('E').format(series[entry.value].time);
+        final labelWidth = canvas.measureText(label, dayFont).actualWidth;
+        final labelLeft = x - labelWidth / 2;
+        if (labelLeft < left) continue;
+        canvas.drawText(
+          label,
+          labelLeft,
+          bottom + 6,
+          dayFont,
+          PStyle(color: _muted),
+        );
+      }
+    } else {
+      // Long windows (months/years): a handful of date ticks instead of one
+      // per point, which would overlap.
+      const tickCount = 6;
+      final format = DateFormat(spanDays > 730 ? 'yyyy' : 'yyyy-MM');
+      for (var i = 1; i < tickCount; i++) {
+        final index = (series.length - 1) * i ~/ tickCount;
+        if (index <= 0) continue;
+        final x = xFor(index);
+        canvas.strokePath([
+          Point(x, top),
+          Point(x, bottom),
+        ], PStyle(color: _grid));
+        final label = format.format(series[index].time);
+        final labelWidth = canvas.measureText(label, dayFont).actualWidth;
+        final labelLeft = x - labelWidth / 2;
+        if (labelLeft < left) continue;
+        canvas.drawText(
+          label,
+          labelLeft,
+          bottom + 6,
+          dayFont,
+          PStyle(color: _muted),
+        );
+      }
     }
 
     final lineColor = _color(

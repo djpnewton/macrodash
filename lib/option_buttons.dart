@@ -280,8 +280,8 @@ class ShareButton extends StatelessWidget {
   final Uri uri;
   final Map<String, String>? queryParams;
 
-  /// Ticker links point at the preview host so social apps can unfurl a chart;
-  /// everything else falls back to the plain app URL.
+  /// Ticker and dashboard pages point at the preview host so social apps can
+  /// unfurl a chart; everything else falls back to the plain app URL.
   String _buildShareUri() {
     final params = {...?queryParams};
     final ticker1 = params.remove('ticker1');
@@ -289,6 +289,14 @@ class ShareButton extends StatelessWidget {
       return tickerShareUrl(
         previewUrl: resolvedLinkPreviewUrl,
         ticker1: ticker1,
+        params: params,
+      );
+    }
+    final page = uri.pathSegments.isEmpty ? '' : uri.pathSegments.last;
+    if (isPreviewPage(page)) {
+      return pageShareUrl(
+        previewUrl: resolvedLinkPreviewUrl,
+        page: page,
         params: params,
       );
     }

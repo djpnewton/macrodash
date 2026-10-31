@@ -45,17 +45,17 @@ Future<Response> onRequest(RequestContext context) async {
     return Response(statusCode: 502, body: 'Failed to fetch ticker data.');
   }
 
-  final png = await renderTickerPreviewPng(
-    TickerPreviewData.fromTicker(result, title: params['title']),
+  final png = await renderPreviewPng(
+    PreviewData.fromTicker(result, title: params['title']),
   );
   cache.add(key, png);
   return _pngResponse(png);
 }
 
 Response _pngResponse(List<int> bytes) => Response.bytes(
-  body: bytes,
-  headers: {
-    'Content-Type': 'image/png',
-    'Cache-Control': 'public, max-age=900',
-  },
-);
+      body: bytes,
+      headers: {
+        'Content-Type': 'image/png',
+        'Cache-Control': 'public, max-age=900',
+      },
+    );

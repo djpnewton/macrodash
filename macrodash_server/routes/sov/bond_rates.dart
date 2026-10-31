@@ -38,46 +38,12 @@ Future<Response> onRequest(RequestContext context) async {
     );
   }
 
-  // Fetch data based on the region
-  List<BondRateData>? bondRateData;
-  switch (region) {
-    case BondRateRegion.usa:
-      bondRateData = await dataDownloader.usBondRateData();
-    case BondRateRegion.japan:
-      bondRateData = await dataDownloader.japBondRateData();
+  final result = await dataDownloader.bondRateSeries(region, term);
+  if (result == null) {
+    return Response(statusCode: 500, body: 'Failed to fetch bond rate data.');
   }
 
-  if (bondRateData == null) {
-    return Response(statusCode: 500, body: 'Failed to fetch debt data.');
-  }
-
-  final data = bondRateData.firstWhere((entry) {
-    return entry.term == term;
-  });
-
-  List<String> sources;
-  switch (region) {
-    case BondRateRegion.usa:
-      sources = [SovData.usTreasurySource];
-    case BondRateRegion.japan:
-      sources = [SovData.japanMinFinanceSource];
-  }
-
-  final category = switch (term) {
-    BondTerm.thirtyYear => '30-Year Treasury',
-    BondTerm.twentyYear => '20-Year Treasury',
-    BondTerm.tenYear => '10-Year Treasury',
-    BondTerm.fiveYear => '5-Year Treasury',
-    BondTerm.oneYear => '1-Year Treasury',
-  };
-
-  final result = AmountSeries(
-    description: 'Bond Rates - $category - Percent',
-    sources: sources,
-    data: data.data,
-  );
-
-// Cache the response
+  // Cache the response
   final resultJson = result.toJson();
   cache.add(key, resultJson);
 

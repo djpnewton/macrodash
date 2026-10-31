@@ -597,4 +597,124 @@ class SovData extends AbstractDownloader {
       BondRateData(term: BondTerm.oneYear, data: bond1yData),
     ];
   }
+
+  /// Assembles the M2 series for [region], combining sources for
+  /// [M2Region.all].
+  Future<AmountSeries?> m2Series(M2Region region) async {
+    List<AmountEntry>? data;
+    final sources = <String>[];
+    switch (region) {
+      case M2Region.japan:
+        data = await japM2Data();
+        sources.add(ecbSource);
+      case M2Region.euro:
+        data = await ecbM2Data();
+        sources.add(ecbSource);
+      case M2Region.usa:
+        data = await fredM2Data();
+        sources.add(fredSource);
+      case M2Region.all:
+        final usaData = await fredM2Data();
+        final ecbData = await ecbM2Data();
+        final japData = await japM2Data();
+        if (usaData != null && ecbData != null && japData != null) {
+          // For each USA date find dates in the ECB and Japan series within a
+          // week and combine them.
+          data = usaData
+              .map((usaEntry) {
+                final date = usaEntry.date;
+                final ecbEntry = ecbData.firstWhere(
+                  (entry) =>
+                      entry.date.isAfter(
+                        date.subtract(const Duration(days: 7)),
+                      ) &&
+                      entry.date.isBefore(date.add(const Duration(days: 7))),
+                  orElse: () => AmountEntry(date: date, amount: 0),
+                );
+                final japEntry = japData.firstWhere(
+                  (entry) =>
+                      entry.date.isAfter(
+                        date.subtract(const Duration(days: 7)),
+                      ) &&
+                      entry.date.isBefore(date.add(const Duration(days: 7))),
+                  orElse: () => AmountEntry(date: date, amount: 0),
+                );
+                if (ecbEntry.amount != 0 && japEntry.amount != 0) {
+                  return AmountEntry(
+                    date: date,
+                    amount: usaEntry.amount + ecbEntry.amount + japEntry.amount,
+                  );
+                }
+                return null;
+              })
+              .whereType<AmountEntry>()
+              .toList();
+          sources.addAll([fredSource, ecbSource]);
+        }
+    }
+    if (data == null) {
+      return null;
+    }
+
+    final regionDescription = switch (region) {
+      M2Region.japan => 'Japan',
+      M2Region.euro => 'Eurozone',
+      M2Region.usa => 'USA',
+      M2Region.all => 'All Regions (USA, Eurozone, Japan)',
+    };
+    return AmountSeries(
+      description: 'M2 - $regionDescription - Trillions of Dollars',
+      sources: sources,
+      data: data,
+    );
+  }
+
+  /// Assembles the public debt series for [region].
+  Future<AmountSeries?> debtSeries(DebtRegion region) async {
+    final data = await usDebtData();
+    if (data == null) {
+      return null;
+    }
+    final regionDescription = switch (region) {
+      DebtRegion.usa => 'USA',
+      DebtRegion.all => 'All Regions (USA)',
+    };
+    return AmountSeries(
+      description: 'Public Debt - $regionDescription - Trillions of Dollars',
+      sources: const [usTreasurySource],
+      data: data,
+    );
+  }
+
+  /// Assembles the bond rate series for [region] and [term].
+  Future<AmountSeries?> bondRateSeries(
+    BondRateRegion region,
+    BondTerm term,
+  ) async {
+    final bondRateData = switch (region) {
+      BondRateRegion.usa => await usBondRateData(),
+      BondRateRegion.japan => await japBondRateData(),
+    };
+    if (bondRateData == null) {
+      return null;
+    }
+
+    final data = bondRateData.firstWhere((entry) => entry.term == term);
+    final sources = switch (region) {
+      BondRateRegion.usa => [usTreasurySource],
+      BondRateRegion.japan => [japanMinFinanceSource],
+    };
+    final category = switch (term) {
+      BondTerm.thirtyYear => '30-Year Treasury',
+      BondTerm.twentyYear => '20-Year Treasury',
+      BondTerm.tenYear => '10-Year Treasury',
+      BondTerm.fiveYear => '5-Year Treasury',
+      BondTerm.oneYear => '1-Year Treasury',
+    };
+    return AmountSeries(
+      description: 'Bond Rates - $category - Percent',
+      sources: sources,
+      data: data.data,
+    );
+  }
 }

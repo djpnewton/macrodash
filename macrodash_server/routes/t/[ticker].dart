@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:dart_frog/dart_frog.dart';
@@ -6,6 +5,8 @@ import 'package:logging/logging.dart';
 import 'package:macrodash_models/models.dart';
 import 'package:macrodash_preview/macrodash_preview.dart';
 
+// ignore: avoid_relative_lib_imports
+import '../../lib/preview_html.dart';
 import '_middleware.dart';
 
 final _log = Logger('link_preview');
@@ -31,8 +32,7 @@ Future<Response> onRequest(RequestContext context, String ticker) async {
   final ticker1 = Uri.decodeComponent(ticker);
   final ticker2 = params['ticker2']?.isEmpty ?? true ? null : params['ticker2'];
   final title = params['title']?.isEmpty ?? true ? null : params['title'];
-  final rangeParam =
-      (params['range'] ?? params['zoom'])?.toLowerCase();
+  final rangeParam = (params['range'] ?? params['zoom'])?.toLowerCase();
   final range = DataRange.values.firstWhere(
     (r) => r.name.toLowerCase() == rangeParam,
     // "max" is monthly, which is a single point over a short window.
@@ -66,54 +66,29 @@ Future<Response> onRequest(RequestContext context, String ticker) async {
   var ogImage = imageUrl.toString();
 
   final result = await context.read<MarketData>().custom(
-    ticker1,
-    ticker2,
-    range,
-    null,
-  );
+        ticker1,
+        ticker2,
+        range,
+        null,
+      );
   if (result == null) {
     _log.warning('No data for $ticker1, falling back to the site image');
     ogImage = '$appUrl/og-image.png';
   } else {
-    final data = TickerPreviewData.fromTicker(result, title: title);
-    pageTitle = '${data.title} (${data.price} ${data.currency})';
-    description =
-        '${data.subtitle}: ${data.price} ${data.currency}, '
+    final data = PreviewData.fromTicker(result, title: title);
+    pageTitle = '${data.title} (${data.value} ${data.unit})';
+    description = '${data.subtitle}: ${data.value} ${data.unit}, '
         '${data.change} over ${data.windowLabel}. MacroDash.';
   }
 
-  final html = '''
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${_escape(pageTitle)} — MacroDash</title>
-<meta name="description" content="${_escape(description)}">
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="MacroDash">
-<meta property="og:title" content="${_escape(pageTitle)}">
-<meta property="og:description" content="${_escape(description)}">
-<meta property="og:url" content="${_escape(shareUrl)}">
-<meta property="og:image" content="${_escape(ogImage)}">
-<meta property="og:image:type" content="image/png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="${_escape('MacroDash chart for $ticker1')}">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="${_escape(pageTitle)}">
-<meta name="twitter:description" content="${_escape(description)}">
-<meta name="twitter:image" content="${_escape(ogImage)}">
-<meta name="twitter:image:alt" content="${_escape('MacroDash chart for $ticker1')}">
-<meta name="theme-color" content="#0B1B33">
-<meta http-equiv="refresh" content="0; url=${_escape(appLink)}">
-<script>window.location.replace(${jsonEncode(appLink)});</script>
-</head>
-<body>
-<p>Opening MacroDash… <a href="${_escape(appLink)}">Continue to the chart</a></p>
-</body>
-</html>
-''';
+  final html = renderLinkPreviewHtml(
+    title: pageTitle,
+    description: description,
+    shareUrl: shareUrl,
+    imageUrl: ogImage,
+    imageAlt: 'MacroDash chart for $ticker1',
+    appLink: appLink,
+  );
 
   return Response(
     body: html,
@@ -123,6 +98,3 @@ Future<Response> onRequest(RequestContext context, String ticker) async {
     },
   );
 }
-
-String _escape(String value) =>
-    const HtmlEscape(HtmlEscapeMode.attribute).convert(value);

@@ -31,8 +31,8 @@ Future<void> main(List<String> args) async {
     currency: 'USD',
   );
 
-  final png = await renderTickerPreviewPng(
-    TickerPreviewData.fromTicker(result, title: 'Gold'),
+  final png = await renderPreviewPng(
+    PreviewData.fromTicker(result, title: 'Gold'),
   );
   File(output).writeAsBytesSync(png);
   stdout.writeln('wrote $output (${png.length} bytes)');

@@ -16,6 +16,7 @@ jobs:
 
     env:
       SERVER_URL: https://macrodash-server.fly.dev
+      LINK_PREVIEW_URL: https://ln.macrodash.me
 
     steps:
       - uses: actions/checkout@v4
@@ -28,6 +29,9 @@ jobs:
       - name: Insert server url
         run: |
           sed -i -e "s|http://localhost:8080|${{ env.SERVER_URL }}|g" lib/config.dart
+      - name: Insert link preview url
+        run: |
+          sed -i -e "s|LINK_PREVIEW_URL_REPLACE|${{ env.LINK_PREVIEW_URL }}|g" lib/config.dart
       - name: Insert client cache busting
         run: |
           sed -i -e "s|CLIENT_VERSION_REPLACE|$(date +%s)|g" web/index.html
@@ -35,6 +39,13 @@ jobs:
         with:
           flutter-version: '3.47.x'
       - run: flutter pub get
+      - name: Analyze and test macrodash_preview
+        working-directory: macrodash_preview
+        run: |
+          dart pub get
+          dart format --set-exit-if-changed .
+          dart analyze
+          dart test
       #- run: flutter test
       - run: dart format --set-exit-if-changed lib
       - run: flutter analyze
@@ -49,6 +60,7 @@ jobs:
 
     env:
       SERVER_URL: https://macrodash-server.fly.dev
+      LINK_PREVIEW_URL: https://ln.macrodash.me
 
     steps:
       - uses: actions/checkout@v4
@@ -61,6 +73,9 @@ jobs:
       - name: Insert server url
         run: |
           sed -i -e "s|http://localhost:8080|${{ env.SERVER_URL }}|g" lib/config.dart
+      - name: Insert link preview url
+        run: |
+          sed -i -e "s|LINK_PREVIEW_URL_REPLACE|${{ env.LINK_PREVIEW_URL }}|g" lib/config.dart
       - name: Insert client cache busting
         run: |
           sed -i -e "s|CLIENT_VERSION_REPLACE|$(date +%s)|g" web/index.html

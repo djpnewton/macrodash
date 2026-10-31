@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
 import 'package:macrodash_models/models.dart';
+import 'package:macrodash_preview/macrodash_preview.dart';
 
+import 'config.dart';
 import 'helper.dart';
 
 class OptionButton extends StatelessWidget {
@@ -278,11 +280,26 @@ class ShareButton extends StatelessWidget {
   final Uri uri;
   final Map<String, String>? queryParams;
 
-  void _share(BuildContext context) {
-    final query = Uri(queryParameters: queryParams).query;
+  /// Ticker links point at the preview host so social apps can unfurl a chart;
+  /// everything else falls back to the plain app URL.
+  String _buildShareUri() {
+    final params = {...?queryParams};
+    final ticker1 = params.remove('ticker1');
+    if (ticker1 != null && ticker1.isNotEmpty) {
+      return tickerShareUrl(
+        previewUrl: resolvedLinkPreviewUrl,
+        ticker1: ticker1,
+        params: params,
+      );
+    }
     // manually construct the share URI to conform to flutter routing
     // uris where the query is after the fragment
-    final shareUri = 'https://macrodash.me/#${uri.path}?$query';
+    final query = Uri(queryParameters: params).query;
+    return '$macrodashWebUrl/#${uri.path}${query.isEmpty ? '' : '?$query'}';
+  }
+
+  void _share(BuildContext context) {
+    final shareUri = _buildShareUri();
 
     showDialog<ShareMethod>(
       context: context,

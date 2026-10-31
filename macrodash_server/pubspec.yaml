@@ -16,6 +16,9 @@ dependencies:
   logging: ^1.3.0
   macrodash_models:
       path: ../macrodash_models
+  macrodash_preview:
+      path: ../macrodash_preview
+  pcanvas: ^2.0.0-beta.3
   quiver: ^3.2.2
   shelf: ^1.4.2
   shelf_cors_headers: ^0.1.5

@@ -10,8 +10,9 @@ class CacheEntry {
   /// The key for the cache entry.
   final String key;
 
-  /// The value for the cache entry.
-  final Map<String, dynamic> value;
+  /// The value for the cache entry: JSON maps for API responses, PNG bytes for
+  /// rendered preview images.
+  final Object? value;
 
   /// The expiration date and time for the cache entry.
   final DateTime expiration;
@@ -32,7 +33,7 @@ class Cache {
   /// duration.
   void add(
     String key,
-    Map<String, dynamic> value, {
+    Object? value, {
     Duration expirationDuration = const Duration(minutes: 5),
   }) {
     final expiration = DateTime.now().add(expirationDuration);
@@ -42,7 +43,7 @@ class Cache {
   /// Retrieves the value associated with the given key from the cache. If the
   /// entry is expired, it removes the entry from the cache and returns null.
   /// If the key does not exist, it returns null.
-  Map<String, dynamic>? get(String key) {
+  Object? get(String key) {
     final entry = _cache[key];
     if (entry == null) {
       return null;

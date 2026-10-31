@@ -60,7 +60,8 @@ class Vis extends StatelessWidget {
                     }
                     break;
                   default:
-                    throw Exception('Invalid zoom level');
+                    // Daily/weekly ranges fall back to unlabelled ticks.
+                    break;
                 }
                 return const SizedBox.shrink();
               },
@@ -103,7 +104,8 @@ class Vis extends StatelessWidget {
               case DataRange.max:
                 return date.year % 10 == 0 && date.month == 1;
               default:
-                throw Exception('Invalid zoom level');
+                // Daily/weekly ranges fall back to unlabelled grid lines.
+                return false;
             }
           },
           verticalInterval: 1,

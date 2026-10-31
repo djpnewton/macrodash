@@ -12,6 +12,7 @@ include: package:flutter_lints/flutter.yaml
 analyzer:
   exclude:
     - macrodash_server
+    - macrodash_preview/test
     - build/**
     - android/**
     - ios/**

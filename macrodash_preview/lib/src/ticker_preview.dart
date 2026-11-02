@@ -197,13 +197,37 @@ class PreviewData {
       bars: [
         for (final entry in sorted.take(maxBars))
           PreviewBar(
-            label: entry.ticker.toUpperCase(),
+            label: _barLabel(entry),
             value: entry.marketCap,
             valueLabel: formatCompactMoney(entry.marketCap),
           ),
       ],
     );
   }
+
+  /// The label drawn beside a market cap bar.
+  ///
+  /// Quote symbols such as gold futures (`GC=F`) read badly, so those use the
+  /// asset name instead; ordinary tickers stay as they are, because `AAPL` is
+  /// what people expect to see.
+  static String _barLabel(MarketOverviewEntry entry) {
+    final ticker = entry.ticker.trim();
+    final name = entry.name.trim();
+    if (name.isNotEmpty && _quoteSymbol.hasMatch(ticker)) {
+      return _ellipsize(name);
+    }
+    return ticker.toUpperCase();
+  }
+
+  /// Symbols that identify a quote rather than a company: futures (`GC=F`),
+  /// indices (`^GSPC`) and currency pairs (`EURUSD=X`).
+  static final RegExp _quoteSymbol = RegExp(r'[=^/]');
+
+  /// Keeps labels inside the preview's left gutter.
+  static String _ellipsize(String label, {int maxLength = 14}) =>
+      label.length <= maxLength
+          ? label
+          : '${label.substring(0, maxLength - 1).trimRight()}…';
 
   /// Filters [entries] to [range], measured back from the latest data point.
   ///

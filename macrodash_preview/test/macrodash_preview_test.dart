@@ -25,6 +25,24 @@ CustomTickerResult ticker({
   );
 }
 
+MarketOverviewEntry _marketEntry({
+  required String ticker,
+  required String name,
+  required double cap,
+}) => MarketOverviewEntry(
+  supply: 0,
+  price: 1,
+  high24h: 0,
+  low24h: 0,
+  priceChangePercent24h: 0,
+  marketCap: cap,
+  ticker: ticker,
+  name: name,
+  image: null,
+  type: MarketCategory.metals,
+  moreInfoLink: null,
+);
+
 void main() {
   group('tickerAppUrl', () {
     test('encodes the ticker and keeps the app hash route', () {
@@ -312,6 +330,56 @@ void main() {
       expect(data.bars.first.label, 'BTC');
       expect(data.bars.first.valueLabel, '\$2.00T');
       expect(data.series, isEmpty);
+    });
+
+    test('labels quote symbols with the asset name', () {
+      final bars =
+          PreviewData.fromMarketCap(
+            title: 'Market Caps',
+            subtitle: 'Metals',
+            entries: [
+              _marketEntry(ticker: 'GC=F', name: 'Gold', cap: 3e13),
+              _marketEntry(ticker: 'SI=F', name: 'Silver', cap: 3e12),
+              _marketEntry(ticker: '^GSPC', name: 'S&P 500', cap: 1e12),
+            ],
+          ).bars;
+
+      expect(bars.map((bar) => bar.label), ['Gold', 'Silver', 'S&P 500']);
+    });
+
+    test('keeps plain tickers uppercase', () {
+      final bars =
+          PreviewData.fromMarketCap(
+            title: 'Market Caps',
+            subtitle: 'Stocks',
+            entries: [
+              _marketEntry(ticker: 'aapl', name: 'Apple Inc.', cap: 5e12),
+              _marketEntry(
+                ticker: 'BRK.A',
+                name: 'Berkshire Hathaway Inc.',
+                cap: 1e12,
+              ),
+            ],
+          ).bars;
+
+      expect(bars.map((bar) => bar.label), ['AAPL', 'BRK.A']);
+    });
+
+    test('truncates names that would overrun the label gutter', () {
+      final bars =
+          PreviewData.fromMarketCap(
+            title: 'Market Caps',
+            subtitle: 'Metals',
+            entries: [
+              _marketEntry(
+                ticker: 'XX=F',
+                name: 'A Very Long Commodity Name',
+                cap: 1e12,
+              ),
+            ],
+          ).bars;
+
+      expect(bars.single.label, 'A Very Long C…');
     });
   });
 

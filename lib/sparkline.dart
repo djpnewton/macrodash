@@ -2,6 +2,10 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart' hide TextDirection;
+
+import 'helper.dart';
+import 'theme.dart';
 
 class SparkPainter extends CustomPainter {
   final List<num?> values;
@@ -236,4 +240,177 @@ class SparkChartPainter extends SparkPainter {
       bottomLabel != oldDelegate.bottomLabel ||
       !listEquals(dayFractions, oldDelegate.dayFractions) ||
       !listEquals(dayLabels, oldDelegate.dayLabels);
+}
+
+/// Shows a full-screen view of a sparkline series.
+///
+/// [values] and [timestamps] are the same series as the thumbnail; the large
+/// view adds a grid line per day plus the min/max price labels.
+Future<void> showLargeSparkline(
+  BuildContext context, {
+  required String title,
+  String? subtitle,
+  String? priceText,
+  String? secondaryText,
+  double? changePercent24h,
+  required List<num?> values,
+  List<int>? timestamps,
+  String note = 'Last 7 days',
+}) {
+  if (values.length < 2) {
+    return Future<void>.value();
+  }
+  final colors = context.appColors;
+
+  // One grid line per day covered by the sparkline.
+  final dayFractions = <double>[];
+  final dayLabels = <String>[];
+  if (timestamps != null && timestamps.length == values.length) {
+    final firstIndexByDay = <int, int>{};
+    for (var i = 0; i < timestamps.length; i++) {
+      final date = DateTime.fromMillisecondsSinceEpoch(timestamps[i]);
+      final day = DateTime(date.year, date.month, date.day);
+      firstIndexByDay.putIfAbsent(day.millisecondsSinceEpoch, () => i);
+    }
+    for (final entry in firstIndexByDay.entries) {
+      dayFractions.add(entry.value / (values.length - 1));
+      dayLabels.add(
+        DateFormat('E').format(DateTime.fromMillisecondsSinceEpoch(entry.key)),
+      );
+    }
+  }
+
+  var maxValue = double.negativeInfinity;
+  var minValue = double.infinity;
+  for (final value in values) {
+    if (value == null) continue;
+    final amount = value.toDouble();
+    if (amount > maxValue) maxValue = amount;
+    if (amount < minValue) minValue = amount;
+  }
+  String? priceLabel(double value) =>
+      value.isFinite ? formatPrice(value, currencyChar: '', space: '') : null;
+
+  final isUp = (changePercent24h ?? 0) >= 0;
+  final changeColor = isUp ? colors.gain : colors.loss;
+  final changePrefix = isUp ? '+' : '';
+
+  return showDialog<void>(
+    context: context,
+    builder:
+        (dialogContext) => Dialog.fullscreen(
+          child: Scaffold(
+            appBar: AppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.close),
+                tooltip: 'Close',
+                onPressed: () => Navigator.of(dialogContext).pop(),
+              ),
+              title: Text(title),
+            ),
+            body: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (subtitle != null) ...[
+                      Text(
+                        subtitle,
+                        style: Theme.of(dialogContext).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 4),
+                    ],
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        if (priceText != null)
+                          Text(
+                            priceText,
+                            style:
+                                Theme.of(dialogContext).textTheme.headlineSmall,
+                          ),
+                        if (secondaryText != null) ...[
+                          const SizedBox(width: 6),
+                          Text(
+                            secondaryText,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color:
+                                  Theme.of(
+                                    dialogContext,
+                                  ).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                        if (changePercent24h != null) ...[
+                          const SizedBox(width: 12),
+                          Text(
+                            '$changePrefix${changePercent24h.toStringAsFixed(2)}%',
+                            style: TextStyle(fontSize: 16, color: changeColor),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '24h',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color:
+                                  Theme.of(
+                                    dialogContext,
+                                  ).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Expanded(
+                      child: SparkChart(
+                        painter: SparkChartPainter(
+                          values,
+                          timestamps: timestamps,
+                          colorUp: colors.gain,
+                          colorDown: colors.loss,
+                          strokeWidth: 2,
+                          fillOpacity: 0.2,
+                          dayFractions: dayFractions,
+                          dayLabels: dayLabels,
+                          topLabel: priceLabel(maxValue),
+                          bottomLabel: priceLabel(minValue),
+                          gridColor:
+                              Theme.of(
+                                dialogContext,
+                              ).colorScheme.outlineVariant,
+                          labelStyle: TextStyle(
+                            fontSize: 11,
+                            color:
+                                Theme.of(
+                                  dialogContext,
+                                ).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        note,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color:
+                              Theme.of(
+                                dialogContext,
+                              ).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+  );
 }

@@ -107,11 +107,44 @@ class _MarketCapPageState extends State<MarketCapPage> {
     );
   }
 
-  Widget _sparkline(
-    String ticker,
-    List<num?>? sparkline,
+  Widget _sparklineThumb(
+    MarketOverviewEntry asset,
+    List<num?> values,
     List<int>? timestamps,
   ) {
+    return Tooltip(
+      message: 'Show larger chart',
+      child: InkWell(
+        onTap:
+            () => showLargeSparkline(
+              context,
+              title: asset.name,
+              subtitle: asset.ticker,
+              priceText: formatPrice(asset.price),
+              changePercent24h: asset.priceChangePercent24h,
+              values: values,
+              timestamps: timestamps,
+            ),
+        child: SizedBox(
+          width: double.infinity,
+          height: 25,
+          child: CustomPaint(
+            painter: SparkPainter(
+              values,
+              timestamps: timestamps,
+              colorUp: context.appColors.gain,
+              colorDown: context.appColors.loss,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _sparkline(MarketOverviewEntry asset) {
+    final ticker = asset.ticker;
+    final sparkline = asset.sparkline;
+    final timestamps = asset.sparklineTimestamps;
     if (sparkline == null) {
       if (_sparklineStatus.keys.contains(ticker)) {
         switch (_sparklineStatus[ticker]!) {
@@ -120,17 +153,11 @@ class _MarketCapPageState extends State<MarketCapPage> {
           case SparklineStatus.error:
             return const Text('No data');
           case SparklineStatus.success:
-            return SizedBox(
-              width: 100,
-              height: 25,
-              child: CustomPaint(
-                painter: SparkPainter(
-                  _sparklineData[ticker]!.sparkline,
-                  timestamps: _sparklineData[ticker]!.sparklineTimestamps,
-                  colorUp: context.appColors.gain,
-                  colorDown: context.appColors.loss,
-                ),
-              ),
+            final data = _sparklineData[ticker]!;
+            return _sparklineThumb(
+              asset,
+              data.sparkline,
+              data.sparklineTimestamps,
             );
         }
       }
@@ -152,18 +179,7 @@ class _MarketCapPageState extends State<MarketCapPage> {
       return const CircularProgressIndicator();
     } else {
       // If the sparkline is already available, use it
-      return SizedBox(
-        width: 100,
-        height: 25,
-        child: CustomPaint(
-          painter: SparkPainter(
-            sparkline,
-            timestamps: timestamps,
-            colorUp: context.appColors.gain,
-            colorDown: context.appColors.loss,
-          ),
-        ),
-      );
+      return _sparklineThumb(asset, sparkline, timestamps);
     }
   }
 
@@ -346,13 +362,7 @@ class _MarketCapPageState extends State<MarketCapPage> {
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                         )
-                        : Center(
-                          child: _sparkline(
-                            asset.ticker,
-                            asset.sparkline,
-                            asset.sparklineTimestamps,
-                          ),
-                        ),
+                        : Center(child: _sparkline(asset)),
               ),
             ],
           ),

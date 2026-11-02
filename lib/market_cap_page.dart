@@ -86,18 +86,6 @@ class _MarketCapPageState extends State<MarketCapPage> {
     });
   }
 
-  String _formatMarketCap(double marketCap) {
-    if (marketCap >= 1e12) {
-      return '\$${(marketCap / 1e12).toStringAsFixed(2)} T';
-    } else if (marketCap >= 1e9) {
-      return '\$${(marketCap / 1e9).toStringAsFixed(2)} B';
-    } else if (marketCap >= 1e6) {
-      return '\$${(marketCap / 1e6).toStringAsFixed(2)} M';
-    } else {
-      return '\$${marketCap.toStringAsFixed(2)}';
-    }
-  }
-
   Text _formatPriceChange(double priceChange) {
     final appColors = context.appColors;
     final color = priceChange > 0 ? appColors.gain : appColors.loss;
@@ -188,7 +176,7 @@ class _MarketCapPageState extends State<MarketCapPage> {
     final smallWidth = size.width < 750;
     final verySmallWidth = size.width < 500;
     final asset = _marketCapSeries!.data[index];
-    final marketCap = _formatMarketCap(asset.marketCap);
+    final marketCap = formatPrice(asset.marketCap);
     final price = formatPrice(asset.price);
     final priceChange = _formatPriceChange(asset.priceChangePercent24h);
     final imgSize = 24.0;

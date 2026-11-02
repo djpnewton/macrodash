@@ -17,6 +17,29 @@ MarketOverviewEntry _entry(String ticker, String name) => MarketOverviewEntry(
     );
 
 void main() {
+  group('MarketData.parseTVAmount', () {
+    test('scales standalone magnitude suffixes', () {
+      expect(MarketData.parseTVAmount('5.03 T USD'), 5.03e12);
+      expect(MarketData.parseTVAmount('1.88 T USD'), 1.88e12);
+      expect(MarketData.parseTVAmount('979.90 B USD'), 979.9e9);
+      expect(MarketData.parseTVAmount('12.5 M USD'), 12.5e6);
+      expect(MarketData.parseTVAmount('1.2K'), 1200);
+    });
+
+    test('does not read currency codes as magnitude suffixes', () {
+      expect(MarketData.parseTVAmount('2,330 TWD'), 2330);
+      expect(MarketData.parseTVAmount('5,273.64 MXN'), 5273.64);
+      expect(MarketData.parseTVAmount('1,455 KRW'), 1455);
+      expect(MarketData.parseTVAmount('27.40 BRL'), 27.4);
+      expect(MarketData.parseTVAmount('344.63 USD'), 344.63);
+    });
+
+    test('returns null when there is no number', () {
+      expect(MarketData.parseTVAmount('—'), isNull);
+      expect(MarketData.parseTVAmount(''), isNull);
+    });
+  });
+
   group('MarketData.dedupeStockListings', () {
     test('collapses a company listed on several exchanges to one row', () {
       final entries = MarketData.dedupeStockListings([

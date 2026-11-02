@@ -31,10 +31,9 @@ Map<String, dynamic> _$AmountEntryToJson(AmountEntry instance) =>
 AmountSeries _$AmountSeriesFromJson(Map<String, dynamic> json) => AmountSeries(
   description: json['description'] as String,
   sources: (json['sources'] as List<dynamic>).map((e) => e as String).toList(),
-  data:
-      (json['data'] as List<dynamic>)
-          .map((e) => AmountEntry.fromJson(e as Map<String, dynamic>))
-          .toList(),
+  data: (json['data'] as List<dynamic>)
+      .map((e) => AmountEntry.fromJson(e as Map<String, dynamic>))
+      .toList(),
 );
 
 Map<String, dynamic> _$AmountSeriesToJson(AmountSeries instance) =>
@@ -48,12 +47,12 @@ MarketOverviewEntry _$MarketOverviewEntryFromJson(Map<String, dynamic> json) =>
     MarketOverviewEntry(
       supply: (json['supply'] as num).toDouble(),
       price: (json['price'] as num).toDouble(),
-      sparkline:
-          (json['sparkline'] as List<dynamic>?)?.map((e) => e as num?).toList(),
-      sparklineTimestamps:
-          (json['sparklineTimestamps'] as List<dynamic>?)
-              ?.map((e) => (e as num).toInt())
-              .toList(),
+      sparkline: (json['sparkline'] as List<dynamic>?)
+          ?.map((e) => e as num?)
+          .toList(),
+      sparklineTimestamps: (json['sparklineTimestamps'] as List<dynamic>?)
+          ?.map((e) => (e as num).toInt())
+          .toList(),
       high24h: (json['high24h'] as num).toDouble(),
       low24h: (json['low24h'] as num).toDouble(),
       priceChangePercent24h: (json['priceChangePercent24h'] as num).toDouble(),
@@ -90,16 +89,16 @@ const _$MarketCategoryEnumMap = {
   MarketCategory.all: 'all',
 };
 
-MarketCapSeries _$MarketCapSeriesFromJson(
-  Map<String, dynamic> json,
-) => MarketCapSeries(
-  description: json['description'] as String,
-  sources: (json['sources'] as List<dynamic>).map((e) => e as String).toList(),
-  data:
-      (json['data'] as List<dynamic>)
+MarketCapSeries _$MarketCapSeriesFromJson(Map<String, dynamic> json) =>
+    MarketCapSeries(
+      description: json['description'] as String,
+      sources: (json['sources'] as List<dynamic>)
+          .map((e) => e as String)
+          .toList(),
+      data: (json['data'] as List<dynamic>)
           .map((e) => MarketOverviewEntry.fromJson(e as Map<String, dynamic>))
           .toList(),
-);
+    );
 
 Map<String, dynamic> _$MarketCapSeriesToJson(MarketCapSeries instance) =>
     <String, dynamic>{
@@ -110,12 +109,12 @@ Map<String, dynamic> _$MarketCapSeriesToJson(MarketCapSeries instance) =>
 
 YahooSparklineData _$YahooSparklineDataFromJson(Map<String, dynamic> json) =>
     YahooSparklineData(
-      sparkline:
-          (json['sparkline'] as List<dynamic>).map((e) => e as num?).toList(),
-      sparklineTimestamps:
-          (json['sparklineTimestamps'] as List<dynamic>)
-              .map((e) => (e as num).toInt())
-              .toList(),
+      sparkline: (json['sparkline'] as List<dynamic>)
+          .map((e) => e as num?)
+          .toList(),
+      sparklineTimestamps: (json['sparklineTimestamps'] as List<dynamic>)
+          .map((e) => (e as num).toInt())
+          .toList(),
     );
 
 Map<String, dynamic> _$YahooSparklineDataToJson(YahooSparklineData instance) =>
@@ -140,10 +139,9 @@ Map<String, dynamic> _$TickerSearchEntryToJson(TickerSearchEntry instance) =>
 
 TickerSearchResult _$TickerSearchResultFromJson(Map<String, dynamic> json) =>
     TickerSearchResult(
-      data:
-          (json['data'] as List<dynamic>)
-              .map((e) => TickerSearchEntry.fromJson(e as Map<String, dynamic>))
-              .toList(),
+      data: (json['data'] as List<dynamic>)
+          .map((e) => TickerSearchEntry.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
 
 Map<String, dynamic> _$TickerSearchResultToJson(TickerSearchResult instance) =>
@@ -155,16 +153,15 @@ CustomTickerResult _$CustomTickerResultFromJson(Map<String, dynamic> json) =>
       ticker2: json['ticker2'] as String?,
       shortName: json['shortName'] as String,
       longName: json['longName'] as String,
-      sources:
-          (json['sources'] as List<dynamic>).map((e) => e as String).toList(),
-      priceData:
-          (json['priceData'] as List<dynamic>)
-              .map((e) => AmountEntry.fromJson(e as Map<String, dynamic>))
-              .toList(),
-      dividendData:
-          (json['dividendData'] as List<dynamic>)
-              .map((e) => AmountEntry.fromJson(e as Map<String, dynamic>))
-              .toList(),
+      sources: (json['sources'] as List<dynamic>)
+          .map((e) => e as String)
+          .toList(),
+      priceData: (json['priceData'] as List<dynamic>)
+          .map((e) => AmountEntry.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      dividendData: (json['dividendData'] as List<dynamic>)
+          .map((e) => AmountEntry.fromJson(e as Map<String, dynamic>))
+          .toList(),
       currency: json['currency'] as String,
     );
 
@@ -194,10 +191,9 @@ Map<String, dynamic> _$DashTickerToJson(DashTicker instance) =>
     };
 
 DashTickers _$DashTickersFromJson(Map<String, dynamic> json) => DashTickers(
-  tickers:
-      (json['tickers'] as List<dynamic>)
-          .map((e) => DashTicker.fromJson(e as Map<String, dynamic>))
-          .toList(),
+  tickers: (json['tickers'] as List<dynamic>)
+      .map((e) => DashTicker.fromJson(e as Map<String, dynamic>))
+      .toList(),
 );
 
 Map<String, dynamic> _$DashTickersToJson(DashTickers instance) =>

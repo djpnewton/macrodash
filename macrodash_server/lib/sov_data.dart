@@ -302,7 +302,7 @@ class SovData extends AbstractDownloader {
 
     try {
       // Parse the CSV data
-      final rows = const CsvToListConverter().convert(csvData, eol: '\n');
+      final rows = csv.decode(csvData);
       if (rows.isEmpty) {
         _log.warning('No data found in the CSV.');
         return null;
@@ -421,7 +421,7 @@ class SovData extends AbstractDownloader {
         return null;
       }
       // Parse the CSV data
-      final rows = const CsvToListConverter().convert(csvData, eol: '\n');
+      final rows = csv.decode(csvData);
       if (rows.isEmpty) {
         _log.warning('No data found in the CSV.');
         return null;
@@ -509,9 +509,9 @@ class SovData extends AbstractDownloader {
     final bond1yData = <AmountEntry>[];
     // Parse the CSV data
     final rowsCurrent =
-        const CsvToListConverter().convert(csvDataCurrent, eol: '\n');
+        csv.decode(csvDataCurrent);
     final rowsHistorical =
-        const CsvToListConverter().convert(csvDataHistorical, eol: '\n');
+        csv.decode(csvDataHistorical);
     final headersCurrent = rowsCurrent.skip(1).first.cast<String>();
     _log.info('CSV headers: $headersCurrent');
     final dateIndex = headersCurrent.indexOf('Date');

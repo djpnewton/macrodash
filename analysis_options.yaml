@@ -13,6 +13,7 @@ analyzer:
   exclude:
     - macrodash_server
     - macrodash_preview/test
+    - macrodash_models/test
     - build/**
     - android/**
     - ios/**

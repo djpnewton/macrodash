@@ -39,6 +39,13 @@ jobs:
         with:
           flutter-version: '3.47.x'
       - run: flutter pub get
+      - name: Analyze and test macrodash_models
+        working-directory: macrodash_models
+        run: |
+          dart pub get
+          dart format --set-exit-if-changed .
+          dart analyze
+          dart test
       - name: Analyze and test macrodash_preview
         working-directory: macrodash_preview
         run: |

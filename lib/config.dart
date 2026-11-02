@@ -20,7 +20,7 @@ String get resolvedLinkPreviewUrl =>
     linkPreviewUrl.startsWith('http') ? linkPreviewUrl : macrodashServerUrl;
 
 /// Client version, used to ensure we match the servers api version
-const int clientVersion = 11;
+const int clientVersion = 12;
 
 /// Theme mode used until one is chosen in settings.
 const ThemeMode defaultThemeMode = ThemeMode.system;

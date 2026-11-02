@@ -108,6 +108,27 @@ class SparkPainter extends CustomPainter {
       values != oldDelegate.values;
 }
 
+/// Width-to-height ratio of the sparkline thumbnails (100x25).
+const double sparklineAspectRatio = 100 / 25;
+
+/// A sparkline that keeps [sparklineAspectRatio] at any size, centred in the
+/// available space so large views are not stretched.
+class SparkChart extends StatelessWidget {
+  const SparkChart({super.key, required this.painter});
+
+  final CustomPainter painter;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: AspectRatio(
+        aspectRatio: sparklineAspectRatio,
+        child: CustomPaint(painter: painter),
+      ),
+    );
+  }
+}
+
 /// A sparkline with a light grid: one vertical line per day and the top/bottom
 /// of the value range labelled in a gutter on the left.
 class SparkChartPainter extends SparkPainter {

@@ -528,30 +528,28 @@ class _DashCardState extends State<DashCard> {
                       ),
                       const SizedBox(height: 16),
                       Expanded(
-                        child: SizedBox.expand(
-                          child: CustomPaint(
-                            painter: SparkChartPainter(
-                              values,
-                              timestamps: timestamps,
-                              colorUp: colors.gain,
-                              colorDown: colors.loss,
-                              strokeWidth: 2,
-                              fillOpacity: 0.2,
-                              dayFractions: dayFractions,
-                              dayLabels: dayLabels,
-                              topLabel: priceLabel(maxValue),
-                              bottomLabel: priceLabel(minValue),
-                              gridColor:
+                        child: SparkChart(
+                          painter: SparkChartPainter(
+                            values,
+                            timestamps: timestamps,
+                            colorUp: colors.gain,
+                            colorDown: colors.loss,
+                            strokeWidth: 2,
+                            fillOpacity: 0.2,
+                            dayFractions: dayFractions,
+                            dayLabels: dayLabels,
+                            topLabel: priceLabel(maxValue),
+                            bottomLabel: priceLabel(minValue),
+                            gridColor:
+                                Theme.of(
+                                  dialogContext,
+                                ).colorScheme.outlineVariant,
+                            labelStyle: TextStyle(
+                              fontSize: 11,
+                              color:
                                   Theme.of(
                                     dialogContext,
-                                  ).colorScheme.outlineVariant,
-                              labelStyle: TextStyle(
-                                fontSize: 11,
-                                color:
-                                    Theme.of(
-                                      dialogContext,
-                                    ).colorScheme.onSurfaceVariant,
-                              ),
+                                  ).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ),

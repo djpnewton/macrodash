@@ -39,13 +39,10 @@ Future<Response> onRequest(RequestContext context, String ticker) async {
     orElse: () => DataRange.fiveDays,
   );
 
-  final imageUrl = Uri.parse('$baseUrl/market/custom_preview_image').replace(
-    queryParameters: {
-      'ticker1': ticker1,
-      if (ticker2 != null) 'ticker2': ticker2,
-      if (title != null) 'title': title,
-      'range': range.name,
-    },
+  final imageUrl = tickerPreviewImageUrl(
+    previewUrl: baseUrl,
+    ticker1: ticker1,
+    params: params,
   );
   // Forward every query parameter to the app so page settings (e.g. `zoom`)
   // survive the redirect; `ticker1` is rebuilt from the path.
@@ -63,7 +60,7 @@ Future<Response> onRequest(RequestContext context, String ticker) async {
 
   var pageTitle = title ?? ticker1;
   var description = 'Live chart and market data for $ticker1 on MacroDash.';
-  var ogImage = imageUrl.toString();
+  var ogImage = imageUrl;
 
   final result = await context.read<MarketData>().custom(
         ticker1,

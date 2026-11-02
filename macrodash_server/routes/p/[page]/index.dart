@@ -39,9 +39,11 @@ Future<Response> onRequest(RequestContext context, String page) async {
     params: params,
   );
   final appLink = pageAppUrl(appUrl: appUrl, page: page, params: params);
-  final imageUrl = Uri.parse(
-    '$baseUrl/p/${Uri.encodeComponent(page)}/preview_image',
-  ).replace(queryParameters: params).toString();
+  final imageUrl = pagePreviewImageUrl(
+    previewUrl: baseUrl,
+    page: page,
+    params: params,
+  );
 
   PreviewData? preview;
   try {

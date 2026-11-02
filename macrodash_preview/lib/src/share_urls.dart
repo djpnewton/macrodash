@@ -6,6 +6,8 @@
 /// redirects people to [tickerAppUrl].
 library;
 
+import 'package:macrodash_models/models.dart';
+
 /// The in-app URL for a ticker, e.g.
 /// `https://macrodash.me/#/ticker?ticker1=GC%3DF&title=Gold`.
 ///
@@ -48,6 +50,53 @@ const previewPageNames = {
 /// Whether [page] (an app route name) has a link preview.
 bool isPreviewPage(String page) =>
     previewPageNames.contains(page.toLowerCase());
+
+/// The chart range a share link's preview image is drawn over.
+///
+/// Mirrors the server: `range` wins over the `zoom` used by some pages, and
+/// unknown or missing values fall back to a five-day window, which is dense
+/// enough to show a curve.
+DataRange previewImageRange(Map<String, String> params) {
+  final name = (params['range'] ?? params['zoom'])?.toLowerCase();
+  return DataRange.values.firstWhere(
+    (range) => range.name.toLowerCase() == name,
+    orElse: () => DataRange.fiveDays,
+  );
+}
+
+/// The image a ticker share link advertises, e.g.
+/// `https://ln.macrodash.me/market/custom_preview_image?range=fiveDays&ticker1=GC%3DF`.
+///
+/// This is the same PNG the preview page puts in its Open Graph tags, so the
+/// share dialog shows recipients exactly what will unfurl.
+String tickerPreviewImageUrl({
+  required String previewUrl,
+  required String ticker1,
+  Map<String, String> params = const {},
+}) {
+  final ticker2 = params['ticker2'];
+  final title = params['title'];
+  final query = _query({
+    'ticker1': ticker1,
+    if (ticker2 != null && ticker2.isNotEmpty) 'ticker2': ticker2,
+    if (title != null && title.isNotEmpty) 'title': title,
+    'range': previewImageRange(params).name,
+  });
+  return '${_trimSlashes(previewUrl)}/market/custom_preview_image?$query';
+}
+
+/// The image a page share link advertises, e.g.
+/// `https://ln.macrodash.me/p/m2/preview_image?region=usa`.
+String pagePreviewImageUrl({
+  required String previewUrl,
+  required String page,
+  Map<String, String> params = const {},
+}) {
+  final base =
+      '${_trimSlashes(previewUrl)}/p/${Uri.encodeComponent(page)}/preview_image';
+  final query = _query(params);
+  return query.isEmpty ? base : '$base?$query';
+}
 
 /// The in-app URL for a non-ticker page, e.g.
 /// `https://macrodash.me/#/m2?region=usa&zoom=oneYear`.

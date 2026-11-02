@@ -274,6 +274,82 @@ class FullscreenButton extends StatelessWidget {
 
 enum ShareMethod { copy, share }
 
+/// The 1200x630 chart image a share link unfurls to
+class SharePreviewImage extends StatelessWidget {
+  const SharePreviewImage({super.key, required this.url, this.imageProvider});
+
+  final String url;
+
+  /// Overrides the network image, so tests can drive the loaded state without
+  /// a server.
+  @visibleForTesting
+  final ImageProvider? imageProvider;
+
+  static const double _aspectRatio = 1200 / 630;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    Widget placeholder({required bool loading}) => ColoredBox(
+      color: theme.colorScheme.surfaceContainerHighest,
+      child: Center(
+        child:
+            loading
+                ? const SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+                : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.image_not_supported_outlined,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Preview unavailable',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+      ),
+    );
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 480),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: AspectRatio(
+          aspectRatio: _aspectRatio,
+          child: Image(
+            image: imageProvider ?? NetworkImage(url),
+            fit: BoxFit.cover,
+            semanticLabel: 'Link preview image',
+            // The server renders the PNG on demand, so the wait is visible.
+            // `frameBuilder` is used rather than `loadingBuilder` because the
+            // web engine never reports byte progress: `loadingBuilder` would
+            // get a null progress for the whole load and show a blank frame.
+            frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+              if (wasSynchronouslyLoaded || frame != null) {
+                return child;
+              }
+              return placeholder(loading: true);
+            },
+            errorBuilder:
+                (context, error, stackTrace) => placeholder(loading: false),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// a share button implementing optionbutton
 class ShareButton extends StatelessWidget {
   const ShareButton({super.key, required this.uri, this.queryParams});
@@ -282,8 +358,7 @@ class ShareButton extends StatelessWidget {
 
   /// Ticker and dashboard pages point at the preview host so social apps can
   /// unfurl a chart; everything else falls back to the plain app URL.
-  String _buildShareUri() {
-    final params = {...?queryParams};
+  String _buildShareUri(Map<String, String> params) {
     final ticker1 = params.remove('ticker1');
     if (ticker1 != null && ticker1.isNotEmpty) {
       return tickerShareUrl(
@@ -306,17 +381,45 @@ class ShareButton extends StatelessWidget {
     return '$macrodashWebUrl/#${uri.path}${query.isEmpty ? '' : '?$query'}';
   }
 
+  /// The chart image recipients will see unfurled, or null when the page has no
+  /// server-rendered preview.
+  String? _buildPreviewImageUri(Map<String, String> params) {
+    final ticker1 = params.remove('ticker1');
+    if (ticker1 != null && ticker1.isNotEmpty) {
+      return tickerPreviewImageUrl(
+        previewUrl: resolvedLinkPreviewUrl,
+        ticker1: ticker1,
+        params: params,
+      );
+    }
+    final page = uri.pathSegments.isEmpty ? '' : uri.pathSegments.last;
+    if (isPreviewPage(page)) {
+      return pagePreviewImageUrl(
+        previewUrl: resolvedLinkPreviewUrl,
+        page: page,
+        params: params,
+      );
+    }
+    return null;
+  }
+
   void _share(BuildContext context) {
-    final shareUri = _buildShareUri();
+    final shareUri = _buildShareUri({...?queryParams});
+    final previewImageUri = _buildPreviewImageUri({...?queryParams});
 
     showDialog<ShareMethod>(
       context: context,
       builder: (context) {
         return AlertDialog(
+          scrollable: true,
           title: Text('Select how you want to share the link:'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (previewImageUri != null) ...[
+                SharePreviewImage(url: previewImageUri),
+                const SizedBox(height: 16),
+              ],
               Text(shareUri.toString()),
               const SizedBox(height: 10),
               Row(

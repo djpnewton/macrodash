@@ -1,3 +1,4 @@
+// ignore_for_file: always_use_package_imports
 import 'package:macrodash_models/models.dart';
 import 'package:macrodash_preview/macrodash_preview.dart';
 

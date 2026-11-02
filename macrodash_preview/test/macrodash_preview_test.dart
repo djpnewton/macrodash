@@ -171,6 +171,74 @@ void main() {
       expect(isPreviewPage('marketCap'), isTrue);
       expect(isPreviewPage('settings'), isFalse);
     });
+
+    test('pagePreviewImageUrl points at the page image endpoint', () {
+      expect(
+        pagePreviewImageUrl(
+          previewUrl: 'https://ln.macrodash.me/',
+          page: 'm2',
+          params: {'region': 'usa'},
+        ),
+        'https://ln.macrodash.me/p/m2/preview_image?region=usa',
+      );
+    });
+
+    test('pagePreviewImageUrl drops the query when there are no params', () {
+      expect(
+        pagePreviewImageUrl(
+          previewUrl: 'https://ln.macrodash.me',
+          page: 'debt',
+        ),
+        'https://ln.macrodash.me/p/debt/preview_image',
+      );
+    });
+  });
+
+  group('tickerPreviewImageUrl', () {
+    test('carries the ticker, title and range', () {
+      expect(
+        tickerPreviewImageUrl(
+          previewUrl: 'https://ln.macrodash.me/',
+          ticker1: 'GC=F',
+          params: {'title': 'Gold', 'zoom': 'oneYear'},
+        ),
+        'https://ln.macrodash.me/market/custom_preview_image'
+        '?range=oneYear&ticker1=GC%3DF&title=Gold',
+      );
+    });
+
+    test('defaults to a five-day window with no params', () {
+      expect(
+        tickerPreviewImageUrl(
+          previewUrl: 'https://ln.macrodash.me',
+          ticker1: 'BTC-USD',
+        ),
+        'https://ln.macrodash.me/market/custom_preview_image'
+        '?range=fiveDays&ticker1=BTC-USD',
+      );
+    });
+
+    test('prefers range over zoom and ignores unknown ranges', () {
+      expect(
+        previewImageRange({'range': 'oneMonth', 'zoom': 'oneYear'}),
+        DataRange.oneMonth,
+      );
+      expect(previewImageRange({'zoom': 'oneYear'}), DataRange.oneYear);
+      expect(previewImageRange({'zoom': 'bogus'}), DataRange.fiveDays);
+      expect(previewImageRange({}), DataRange.fiveDays);
+    });
+
+    test('forwards ticker2 for comparison charts', () {
+      expect(
+        tickerPreviewImageUrl(
+          previewUrl: 'https://ln.macrodash.me',
+          ticker1: 'BTC-USD',
+          params: {'ticker2': 'GC=F', 'title': '', 'range': 'oneDay'},
+        ),
+        'https://ln.macrodash.me/market/custom_preview_image'
+        '?range=oneDay&ticker1=BTC-USD&ticker2=GC%3DF',
+      );
+    });
   });
 
   group('PreviewData.fromSeries', () {

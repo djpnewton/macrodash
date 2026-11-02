@@ -421,12 +421,14 @@ class MarketData extends AbstractDownloader {
         .toList();
   }
 
-  double? _parseTVAmount(String amountStr) {
-    // TradingView renders values like "5.03 T USD"; ignore the currency and
-    // scale by the magnitude suffix.
+  /// Parses a TradingView amount such as `5.03 T USD` or `2,330 TWD`.
+  ///
+  /// The magnitude suffix only counts when it stands on its own, so the `T` in
+  /// a currency like TWD (or the `M` in MXN) is not read as a multiplier.
+  static double? parseTVAmount(String amountStr) {
     final normalized = amountStr.replaceAll('\u00A0', ' ').trim();
     final match = RegExp(
-      r'^([+-]?\d[\d,]*(?:\.\d+)?)\s*([TBMK])?',
+      r'^([+-]?\d[\d,]*(?:\.\d+)?)(?:\s*([TBMK])(?=\s|$))?',
       caseSensitive: false,
     ).firstMatch(normalized);
     if (match == null) {
@@ -465,114 +467,165 @@ class MarketData extends AbstractDownloader {
     }
   }
 
+  /// Primary Yahoo Finance ticker for the largest companies, keyed by the
+  /// TradingView symbol. TradingView repeats a company once per exchange, so
+  /// this also identifies the listing to keep when deduplicating.
+  static const Map<String, String> _largestCompanyYahooTickers = {
+    'AAPL': 'AAPL',
+    'MSFT': 'MSFT',
+    'NVDA': 'NVDA',
+    'AMZN': 'AMZN',
+    'GOOG': 'GOOG',
+    '2222': '2222.SR',
+    'META': 'META',
+    'BRK.A': 'BRK-A',
+    'TSLA': 'TSLA',
+    'AVGO': 'AVGO',
+    'LLY': 'LLY',
+    'WMT': 'WMT',
+    '2330': '2330.TW',
+    'JPM': 'JPM',
+    'V': 'V',
+    '700': '0700.HK',
+    'MA': 'MA',
+    'NFLX': 'NFLX',
+    'XOM': 'XOM',
+    'COST': 'COST',
+    'ORCL': 'ORCL',
+    'UNH': 'UNH',
+    'PG': 'PG',
+    'JNJ': 'JNJ',
+    'HD': 'HD',
+    'ABBV': 'ABBV',
+    '601398': '601398.SS',
+    'SAP': 'SAP',
+    'KO': 'KO',
+    'BAC': 'BAC',
+    'BABA': 'BABA',
+    'MC': 'MC.PA',
+    'RMS': 'RMS.PA',
+    'NOVO_B': 'NOVO-B.CO',
+    'PLTR': 'PLTR',
+    'TMUS': 'TMUS',
+    '600519': '600519.SS',
+    'PM': 'PM',
+    '601288': '601288.SS',
+    'NESN': 'NESN.SW',
+    'ASML': 'ASML',
+    'RO': 'ROG.SW',
+    'CRM': 'CRM',
+    '005930': '005930.KS',
+    '7203': '7203.T',
+    'CVX': 'CVX',
+    'IHC': 'IHC.AE',
+    '600941': '600941.SS',
+    'MCD': 'MCD',
+    'WFC': 'WFC',
+    'CSCO': 'CSCO',
+    'OR': 'OR.PA',
+    'ABT': 'ABT',
+    '601939': '601939.SS',
+    'IBM': 'IBM',
+    'AZN': 'AZN',
+    'GE': 'GE',
+    'NOVN': 'NOVN.SW',
+    'LIN': 'LIN',
+    '601988': '601988.SS',
+    'MRK': 'MRK',
+    'RELIANCE': 'RELIANCE.NS',
+    'HSBA': 'HSBA.L',
+    'T': 'T',
+    'SHEL': 'SHEL',
+    'NOW': 'NOW',
+    '601857': '601857.SS',
+    'MS': 'MS',
+    'AXP': 'AXP',
+    'ISRG': 'ISRG',
+    'SIE': 'SIE.DE',
+    'ACN': 'ACN',
+    'PEP': 'PEP',
+    'VZ': 'VZ',
+    'DTE': 'DTE.DE',
+    'CBA': 'CBA.AX',
+    'INTU': 'INTU',
+    'ITX': 'ITX.MC',
+    'HDFCBANK': 'HDFCBANK.NS',
+    'GS': 'GS',
+    'RTX': 'RTX',
+    'RY': 'RY',
+    'UBER': 'UBER',
+    'QCOM': 'QCOM',
+    'DIS': 'DIS',
+    'BX': 'BX',
+    'BKNG': 'BKNG',
+    'TMO': 'TMO',
+    'PGR': 'PGR',
+    'ADBE': 'ADBE',
+    'ALV': 'ALV.DE',
+    'AMD': 'AMD',
+    'ULVR': 'ULVR.L',
+    '002594': '002594.SZ',
+    '1810': '1810.HK',
+    'AMGN': 'AMGN',
+    'BSX': 'BSX',
+    'SPGI': 'SPGI',
+    '6758': '6758.T',
+    'SCHW': 'SCHW',
+  };
+
   String? _yahooTicker(String ticker) {
-    const largestCompanyYahooTickers = {
-      'AAPL': 'AAPL',
-      'MSFT': 'MSFT',
-      'NVDA': 'NVDA',
-      'AMZN': 'AMZN',
-      'GOOG': 'GOOG',
-      '2222': '2222.SR',
-      'META': 'META',
-      'BRK.A': 'BRK-A',
-      'TSLA': 'TSLA',
-      'AVGO': 'AVGO',
-      'LLY': 'LLY',
-      'WMT': 'WMT',
-      '2330': '2330.TW',
-      'JPM': 'JPM',
-      'V': 'V',
-      '700': '0700.HK',
-      'MA': 'MA',
-      'NFLX': 'NFLX',
-      'XOM': 'XOM',
-      'COST': 'COST',
-      'ORCL': 'ORCL',
-      'UNH': 'UNH',
-      'PG': 'PG',
-      'JNJ': 'JNJ',
-      'HD': 'HD',
-      'ABBV': 'ABBV',
-      '601398': '601398.SS',
-      'SAP': 'SAP',
-      'KO': 'KO',
-      'BAC': 'BAC',
-      'BABA': 'BABA',
-      'MC': 'MC.PA',
-      'RMS': 'RMS.PA',
-      'NOVO_B': 'NOVO-B.CO',
-      'PLTR': 'PLTR',
-      'TMUS': 'TMUS',
-      '600519': '600519.SS',
-      'PM': 'PM',
-      '601288': '601288.SS',
-      'NESN': 'NESN.SW',
-      'ASML': 'ASML',
-      'RO': 'ROG.SW',
-      'CRM': 'CRM',
-      '005930': '005930.KS',
-      '7203': '7203.T',
-      'CVX': 'CVX',
-      'IHC': 'IHC.AE',
-      '600941': '600941.SS',
-      'MCD': 'MCD',
-      'WFC': 'WFC',
-      'CSCO': 'CSCO',
-      'OR': 'OR.PA',
-      'ABT': 'ABT',
-      '601939': '601939.SS',
-      'IBM': 'IBM',
-      'AZN': 'AZN',
-      'GE': 'GE',
-      'NOVN': 'NOVN.SW',
-      'LIN': 'LIN',
-      '601988': '601988.SS',
-      'MRK': 'MRK',
-      'RELIANCE': 'RELIANCE.NS',
-      'HSBA': 'HSBA.L',
-      'T': 'T',
-      'SHEL': 'SHEL',
-      'NOW': 'NOW',
-      '601857': '601857.SS',
-      'MS': 'MS',
-      'AXP': 'AXP',
-      'ISRG': 'ISRG',
-      'SIE': 'SIE.DE',
-      'ACN': 'ACN',
-      'PEP': 'PEP',
-      'VZ': 'VZ',
-      'DTE': 'DTE.DE',
-      'CBA': 'CBA.AX',
-      'INTU': 'INTU',
-      'ITX': 'ITX.MC',
-      'HDFCBANK': 'HDFCBANK.NS',
-      'GS': 'GS',
-      'RTX': 'RTX',
-      'RY': 'RY',
-      'UBER': 'UBER',
-      'QCOM': 'QCOM',
-      'DIS': 'DIS',
-      'BX': 'BX',
-      'BKNG': 'BKNG',
-      'TMO': 'TMO',
-      'PGR': 'PGR',
-      'ADBE': 'ADBE',
-      'ALV': 'ALV.DE',
-      'AMD': 'AMD',
-      'ULVR': 'ULVR.L',
-      '002594': '002594.SZ',
-      '1810': '1810.HK',
-      'AMGN': 'AMGN',
-      'BSX': 'BSX',
-      'SPGI': 'SPGI',
-      '6758': '6758.T',
-      'SCHW': 'SCHW',
-    };
-    if (!largestCompanyYahooTickers.keys.contains(ticker)) {
+    if (!_largestCompanyYahooTickers.containsKey(ticker)) {
       _log.warning('Ticker $ticker is not in the list of largest companies');
       return null;
     }
-    return largestCompanyYahooTickers[ticker];
+    return _largestCompanyYahooTickers[ticker];
+  }
+
+  /// Company name without share-class or depositary-receipt qualifiers, so
+  /// listings of the same company on different exchanges collapse to one key.
+  static String _companyKey(String name) {
+    var key = name.trim().toLowerCase();
+    for (var changed = true; changed;) {
+      changed = false;
+      for (final suffix in const [
+        r'\s+class\s+[a-z0-9]+$',
+        r'\s+series\s+[a-z0-9]+$',
+        r'\s+common\s+stock$',
+        r'\s+(registered\s+|bearer\s+)?(shs|shares)\b.*$',
+        r'\s+(sponsored\s+)?(adrs?|gdrs?)$',
+        r'\s+depositary\s+receipts?\b.*$',
+      ]) {
+        final stripped = key.replaceFirst(RegExp(suffix), '');
+        if (stripped != key) {
+          key = stripped;
+          changed = true;
+        }
+      }
+    }
+    return key;
+  }
+
+  /// Collapses rows that describe the same company on different exchanges,
+  /// keeping the highest-ranked one unless a primary listing is known.
+  static List<MarketOverviewEntry> dedupeStockListings(
+    List<MarketOverviewEntry> entries,
+  ) {
+    final byCompany = <String, MarketOverviewEntry>{};
+    final companiesWithPrimary = <String>{};
+    for (final entry in entries) {
+      final company = _companyKey(entry.name);
+      final hasPrimary = _largestCompanyYahooTickers.containsKey(entry.ticker);
+      if (!byCompany.containsKey(company)) {
+        byCompany[company] = entry;
+        if (hasPrimary) {
+          companiesWithPrimary.add(company);
+        }
+      } else if (hasPrimary && !companiesWithPrimary.contains(company)) {
+        byCompany[company] = entry;
+        companiesWithPrimary.add(company);
+      }
+    }
+    return byCompany.values.toList();
   }
 
   Future<List<MarketOverviewEntry>?> _marketCapStocks(String serverUrl) async {
@@ -614,13 +667,13 @@ class MarketData extends AbstractDownloader {
       final ticker = links.first.text.trim();
       final name = links.length > 1 ? links[1].text.trim() : ticker;
       // get the market cap from the third cell
-      final marketCap = _parseTVAmount(cells[2].text);
+      final marketCap = parseTVAmount(cells[2].text);
       if (marketCap == null) {
         _log.warning('Failed to parse market cap for $ticker');
         continue;
       }
       // get price from the fourth cell
-      final price = _parseTVAmount(cells[3].text);
+      final price = parseTVAmount(cells[3].text);
       if (price == null) {
         _log.warning('Failed to parse price for $ticker');
         continue;
@@ -653,7 +706,7 @@ class MarketData extends AbstractDownloader {
         ),
       );
     }
-    return entries;
+    return dedupeStockListings(entries);
   }
 
   /// Fetches and parses the market capitalization data into a list of

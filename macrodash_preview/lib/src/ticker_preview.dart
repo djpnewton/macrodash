@@ -107,16 +107,20 @@ class PreviewData {
     final isGain = changePercent >= 0;
     final sign = isGain ? '+' : '';
 
+    final previewTitle = title?.isNotEmpty == true ? title! : result.shortName;
+    final name =
+        result.longName.isNotEmpty
+            ? result.longName
+            : [
+              result.ticker1,
+              if (result.ticker2 != null && result.ticker2!.isNotEmpty)
+                result.ticker2!,
+            ].join(' / ');
+
     return PreviewData(
-      title: title?.isNotEmpty == true ? title! : result.shortName,
-      subtitle:
-          result.longName.isNotEmpty
-              ? result.longName
-              : [
-                result.ticker1,
-                if (result.ticker2 != null && result.ticker2!.isNotEmpty)
-                  result.ticker2!,
-              ].join(' / '),
+      title: previewTitle,
+      // A subtitle that repeats the title adds nothing.
+      subtitle: name == previewTitle ? '' : name,
       value: formatCompactAmount(last ?? 0),
       unit: result.currency,
       change: '$sign${changePercent.toStringAsFixed(2)}%',
@@ -210,24 +214,8 @@ class PreviewData {
   /// Quote symbols such as gold futures (`GC=F`) read badly, so those use the
   /// asset name instead; ordinary tickers stay as they are, because `AAPL` is
   /// what people expect to see.
-  static String _barLabel(MarketOverviewEntry entry) {
-    final ticker = entry.ticker.trim();
-    final name = entry.name.trim();
-    if (name.isNotEmpty && _quoteSymbol.hasMatch(ticker)) {
-      return _ellipsize(name);
-    }
-    return ticker.toUpperCase();
-  }
-
-  /// Symbols that identify a quote rather than a company: futures (`GC=F`),
-  /// indices (`^GSPC`) and currency pairs (`EURUSD=X`).
-  static final RegExp _quoteSymbol = RegExp(r'[=^/]');
-
-  /// Keeps labels inside the preview's left gutter.
-  static String _ellipsize(String label, {int maxLength = 14}) =>
-      label.length <= maxLength
-          ? label
-          : '${label.substring(0, maxLength - 1).trimRight()}…';
+  static String _barLabel(MarketOverviewEntry entry) =>
+      shortTickerLabel(ticker: entry.ticker, name: entry.name);
 
   /// Filters [entries] to [range], measured back from the latest data point.
   ///

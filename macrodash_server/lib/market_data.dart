@@ -880,7 +880,10 @@ class MarketData extends AbstractDownloader {
       return CustomTickerResult(
         ticker1: ticker1,
         ticker2: ticker2,
-        shortName: ticker1,
+        shortName: shortTickerLabel(
+          ticker: ticker1,
+          name: rawTicker1Data.name,
+        ),
         longName: rawTicker1Data.name,
         sources: const [MarketData.yahooSource],
         priceData: rawTicker1Data.priceData,
@@ -952,7 +955,10 @@ class MarketData extends AbstractDownloader {
     return CustomTickerResult(
       ticker1: ticker1,
       ticker2: ticker2,
-      shortName: '$ticker1/$ticker2',
+      shortName:
+          '${shortTickerLabel(ticker: ticker1, name: rawTicker1Data.name)}'
+          ' / '
+          '${shortTickerLabel(ticker: ticker2, name: rawTicker2Data.name)}',
       longName: '$ticker1/$ticker2',
       sources: const [yahooSource],
       priceData: combinedData,

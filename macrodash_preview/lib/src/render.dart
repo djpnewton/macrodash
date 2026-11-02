@@ -98,9 +98,22 @@ class _TickerPreviewPainter extends PCanvasPainter {
 
     canvas.drawText('MacroDash', left, 78, brand, PStyle(color: _subtle));
     canvas.drawText(data.title, left, 112, large, PStyle(color: _ink));
-    canvas.drawText(data.subtitle, left, 172, small, PStyle(color: _muted));
 
-    canvas.drawText(data.value, left, 208, large, PStyle(color: _ink));
+    // Previews without a subtitle move the value up rather than leaving a gap.
+    const subtitleTop = 172.0;
+    const valueTop = 208.0;
+    final hasSubtitle = data.subtitle.isNotEmpty;
+    if (hasSubtitle) {
+      canvas.drawText(
+        data.subtitle,
+        left,
+        subtitleTop,
+        small,
+        PStyle(color: _muted),
+      );
+    }
+    final valueY = hasSubtitle ? valueTop : subtitleTop;
+    canvas.drawText(data.value, left, valueY, large, PStyle(color: _ink));
     final valueWidth = canvas.measureText(data.value, large).actualWidth;
 
     final currencyFont = PFont('Arial', 24);
@@ -112,7 +125,7 @@ class _TickerPreviewPainter extends PCanvasPainter {
 
     // The bitmap fonts have different ascent/descent, so align on the bottom
     // of a common baseline row instead of the glyph box top.
-    const baseline = 232.0;
+    final baseline = valueY + 24;
     void drawAligned(String text, double x, PFont font, PColor color) {
       final height = canvas.measureText(text, font).actualHeight;
       canvas.drawText(text, x, baseline - height, font, PStyle(color: color));

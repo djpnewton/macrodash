@@ -147,6 +147,52 @@ final marketCategoryLabels = {
   MarketCategory.all: 'All',
 };
 
+/// Longest label that still fits the app's narrow ticker and preview gutters.
+const int maxTickerLabelLength = 14;
+
+/// Symbols that identify a quote rather than a company: futures (`GC=F`),
+/// indices (`^GSPC`), FX pairs (`EURUSD=X`) and crypto pairs (`BTC-USD`).
+final _quoteSymbol = RegExp(
+  r'[=^/]|^[A-Z0-9]+-(USD|EUR|GBP|JPY|CHF|AUD|CAD|CNY)$',
+);
+
+/// Trailing futures contract month, e.g. the "Dec 26" in "Gold Dec 26".
+final _contractMonth = RegExp(r'(?:^|\s+)[A-Z][a-z]{2}\s+\d{2}$');
+
+/// Trailing quote currency, e.g. the "USD" in "Bitcoin USD".
+final _quoteCurrency = RegExp(r'(?:^|\s+)(USD|EUR|GBP|JPY|CHF|AUD|CAD|CNY)$');
+
+/// A short, human-readable label for [ticker], given its provider [name].
+///
+/// Quote symbols read badly in tight UI ("GC=F", "^GSPC"), so those use the
+/// provider's name with contract months and quote currencies trimmed:
+/// "Gold Dec 26" becomes "Gold" and "Bitcoin USD" becomes "Bitcoin".
+/// Ordinary share tickers are kept as they are, because "AAPL" is the name
+/// people look for.
+String shortTickerLabel({required String ticker, required String name}) {
+  final symbol = ticker.trim().toUpperCase();
+  if (symbol.isEmpty || !_quoteSymbol.hasMatch(symbol)) {
+    return symbol;
+  }
+  var label = name.trim();
+  for (var changed = label.isNotEmpty; changed;) {
+    changed = false;
+    final stripped = label
+        .replaceFirst(_contractMonth, '')
+        .replaceFirst(_quoteCurrency, '');
+    if (stripped != label) {
+      label = stripped.trim();
+      changed = true;
+    }
+  }
+  if (label.isEmpty) {
+    return symbol;
+  }
+  return label.length <= maxTickerLabelLength
+      ? label
+      : '${label.substring(0, maxTickerLabelLength - 1).trimRight()}…';
+}
+
 /// Represents a single entry in price/amount series.
 @JsonSerializable()
 class AmountEntry extends Equatable {
@@ -405,11 +451,15 @@ class CustomTickerResult extends Equatable {
 
 @JsonSerializable()
 class DashTicker extends Equatable {
-  final String ? title;
+  final String? title;
   final String ticker1;
   final String? ticker2;
 
-  const DashTicker({required this.title, required this.ticker1, required this.ticker2});
+  const DashTicker({
+    required this.title,
+    required this.ticker1,
+    required this.ticker2,
+  });
 
   /// Creates an instance of [DashTicker] from a JSON map.
   factory DashTicker.fromJson(Map<String, dynamic> json) =>

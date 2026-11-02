@@ -259,6 +259,50 @@ void main() {
     });
   });
 
+  group('PreviewData.fromTicker subtitle', () {
+    CustomTickerResult named(String shortName, String longName) {
+      final base = ticker();
+      return CustomTickerResult(
+        ticker1: base.ticker1,
+        ticker2: null,
+        shortName: shortName,
+        longName: longName,
+        sources: base.sources,
+        priceData: base.priceData,
+        dividendData: base.dividendData,
+        currency: base.currency,
+      );
+    }
+
+    test('keeps a subtitle that differs from the title', () {
+      final data = PreviewData.fromTicker(named('Gold', 'Gold Dec 26'));
+
+      expect(data.title, 'Gold');
+      expect(data.subtitle, 'Gold Dec 26');
+    });
+
+    test('drops a subtitle that repeats the title', () {
+      final data = PreviewData.fromTicker(named('S&P 500', 'S&P 500'));
+
+      expect(data.title, 'S&P 500');
+      expect(data.subtitle, isEmpty);
+    });
+
+    test('drops a subtitle that repeats an explicit title', () {
+      final data = PreviewData.fromTicker(named('Gold', 'Gold'), title: 'Gold');
+
+      expect(data.subtitle, isEmpty);
+    });
+
+    test('renders a preview without a subtitle', () async {
+      final png = await renderPreviewPng(
+        PreviewData.fromTicker(named('S&P 500', 'S&P 500')),
+      );
+
+      expect(png.length, greaterThan(1000));
+    });
+  });
+
   group('PreviewData.fromSeries', () {
     test('reports the value, unit and change over the range', () {
       final data = PreviewData.fromSeries(

@@ -420,10 +420,11 @@ class _DashCardState extends State<DashCard> {
   ) {
     assert(_customTickerResult != null, 'Custom ticker result is null');
     final result = _customTickerResult!;
+    final title = widget.ticker.title ?? result.shortName;
     showLargeSparkline(
       context,
-      title: widget.ticker.title ?? result.shortName,
-      subtitle: result.longName,
+      title: title,
+      subtitle: result.longName == title ? null : result.longName,
       priceText: formatPrice(
         result.priceData.last.amount,
         currencyChar: '',
@@ -438,10 +439,12 @@ class _DashCardState extends State<DashCard> {
 
   Widget _buildTickerCard(BuildContext context) {
     assert(_customTickerResult != null, 'Custom ticker result is null');
-    final sparklineData = _calculateSparklineValues(
-      _customTickerResult!.priceData,
-    );
+    final result = _customTickerResult!;
+    final sparklineData = _calculateSparklineValues(result.priceData);
     final useColumn = MediaQuery.of(context).size.width < 400;
+    final title = widget.ticker.title ?? result.shortName;
+    // A subtitle that repeats the title adds nothing.
+    final subtitle = result.longName == title ? '' : result.longName;
 
     return Card(
       //margin: const EdgeInsets.all(8),
@@ -456,14 +459,14 @@ class _DashCardState extends State<DashCard> {
               width: 100,
               height: 35,
               child: _stackText(
-                widget.ticker.title ?? _customTickerResult!.shortName,
+                title,
                 16,
-                _customTickerResult!.longName,
+                subtitle,
                 8,
                 topWidget: TextButton(
                   onPressed: widget.onTitleTap,
                   child: Text(
-                    widget.ticker.title ?? _customTickerResult!.shortName,
+                    title,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,

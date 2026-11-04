@@ -311,6 +311,9 @@ Future<void> showLargeSparkline(
   final changeColor = isUp ? colors.gain : colors.loss;
   final changePrefix = isUp ? '+' : '';
 
+  final navigator = Navigator.of(context, rootNavigator: true);
+  final releaseBackGuard = installBackGuard(() => navigator.maybePop());
+
   return showDialog<void>(
     context: context,
     builder:
@@ -428,5 +431,5 @@ Future<void> showLargeSparkline(
             ),
           ),
         ),
-  );
+  ).whenComplete(releaseBackGuard);
 }

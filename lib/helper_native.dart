@@ -18,3 +18,5 @@ bool isFullscreenImpl() {
 void exitFullscreenImpl() {
   log.warning('Exiting fullscreen is not supported on this platform.');
 }
+
+void Function() installBackGuardImpl(void Function() onBack) => () {};

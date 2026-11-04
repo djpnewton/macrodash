@@ -20,6 +20,12 @@ void exitFullscreen() {
   exitFullscreenImpl();
 }
 
+/// Makes the browser back action call [onBack] while active (web only).
+/// Call the returned function once the guarded UI is closed.
+void Function() installBackGuard(void Function() onBack) {
+  return installBackGuardImpl(onBack);
+}
+
 bool isWebMobile() {
   return kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.iOS ||

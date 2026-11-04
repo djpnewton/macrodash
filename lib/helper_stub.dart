@@ -7,3 +7,5 @@ bool isFullscreenImpl() {
 }
 
 void exitFullscreenImpl() {}
+
+void Function() installBackGuardImpl(void Function() onBack) => () {};

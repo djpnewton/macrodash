@@ -38,3 +38,28 @@ bool isFullscreenImpl() {
 void exitFullscreenImpl() {
   web.document.exitFullscreen();
 }
+
+/// Adds a history entry so the browser back button triggers [onBack] instead
+/// of leaving the page. The returned function removes the entry again.
+void Function() installBackGuardImpl(void Function() onBack) {
+  var active = true;
+  late final JSFunction listener;
+  void deactivate() {
+    active = false;
+    web.window.removeEventListener('popstate', listener);
+  }
+
+  listener =
+      ((web.Event _) {
+        if (!active) return;
+        deactivate();
+        onBack();
+      }).toJS;
+  web.window.history.pushState(web.window.history.state, '');
+  web.window.addEventListener('popstate', listener);
+  return () {
+    if (!active) return;
+    deactivate();
+    web.window.history.back();
+  };
+}

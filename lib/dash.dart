@@ -549,20 +549,10 @@ class _DashCardState extends State<DashCard> {
   Widget build(BuildContext context) {
     switch (_state) {
       case DashState.loading:
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          child: Card(
-            //margin: const EdgeInsets.all(8),
-            child: Center(child: CircularProgressIndicator()),
-          ),
-        );
+        return const Card(child: Center(child: CircularProgressIndicator()));
       case DashState.error:
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          child: Card(
-            //margin: const EdgeInsets.all(8),
-            child: Text('Error loading ticker data'),
-          ),
+        return const Card(
+          child: Center(child: Text('Error loading ticker data')),
         );
       case DashState.loaded:
         return _buildTickerCard(context);

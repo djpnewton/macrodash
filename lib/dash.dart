@@ -195,6 +195,11 @@ class DashCard extends StatefulWidget {
 class _DashCardState extends State<DashCard> {
   DashState _state = DashState.loading;
   CustomTickerResult? _customTickerResult;
+  bool _show7d = false;
+
+  Duration get _window =>
+      _show7d ? const Duration(days: 7) : const Duration(hours: 24);
+  String get _windowLabel => _show7d ? '7d' : '24h';
 
   @override
   void initState() {
@@ -221,36 +226,28 @@ class _DashCardState extends State<DashCard> {
     }
   }
 
-  double _calculateChange24h(List<AmountEntry> data) {
-    if (data.isEmpty) return 0.0;
-    // only use the dates that are in the last 24h from the last entry
-    final lastDate = data.last.date;
-    final last24h = data.where(
-      (entry) =>
-          entry.date.isAfter(lastDate.subtract(const Duration(hours: 24))),
-    );
-    if (last24h.isEmpty) return 0.0;
-    // calculate the change from the first to the last entry
-    final firstValue = last24h.first.amount;
-    final lastValue = last24h.last.amount;
+  /// Data within [_window] of the last entry.
+  List<AmountEntry> _windowData(List<AmountEntry> data) {
+    if (data.isEmpty) return const [];
+    final cutoff = data.last.date.subtract(_window);
+    return data.where((entry) => entry.date.isAfter(cutoff)).toList();
+  }
+
+  double _calculateChange(List<AmountEntry> data) {
+    final windowData = _windowData(data);
+    if (windowData.isEmpty) return 0.0;
+    final firstValue = windowData.first.amount;
+    final lastValue = windowData.last.amount;
     if (firstValue == 0) return 0.0; // avoid division by zero
-    // calculate the percentage change
     return ((lastValue - firstValue) / firstValue) * 100;
   }
 
   YahooSparklineData _calculateSparklineValues(List<AmountEntry> data) {
-    // only use the last 7 days of data from the last entry
-    final lastDate = data.last.date;
-    final last7Days = data.where(
-      (entry) => entry.date.isAfter(lastDate.subtract(const Duration(days: 7))),
-    );
-    if (last7Days.isEmpty) {
-      return YahooSparklineData(sparkline: [], sparklineTimestamps: []);
-    }
+    final windowData = _windowData(data);
     return YahooSparklineData(
-      sparkline: last7Days.map((entry) => entry.amount).toList(),
+      sparkline: windowData.map((entry) => entry.amount).toList(),
       sparklineTimestamps:
-          last7Days.map((entry) => entry.date.millisecondsSinceEpoch).toList(),
+          windowData.map((entry) => entry.date.millisecondsSinceEpoch).toList(),
     );
   }
 
@@ -335,8 +332,8 @@ class _DashCardState extends State<DashCard> {
   }
 
   List<Widget> _buildPriceWidgets(bool useColumn) {
-    final change24h = _calculateChange24h(_customTickerResult!.priceData);
-    final isUp = change24h >= 0;
+    final changePct = _calculateChange(_customTickerResult!.priceData);
+    final isUp = changePct >= 0;
     final appColors = context.appColors;
     final changeColor = isUp ? appColors.gain : appColors.loss;
     final changePrefix = isUp ? '+' : '';
@@ -370,25 +367,32 @@ class _DashCardState extends State<DashCard> {
                 8,
               ),
     );
-    final change = SizedBox(
+    final changeBox = SizedBox(
       width: boxWidth,
       height: boxHeight,
       child:
           useColumn
               ? _rowText(
-                '$changePrefix${change24h.toStringAsFixed(2)}%',
+                '$changePrefix${changePct.toStringAsFixed(2)}%',
                 fontSize,
-                '24h',
+                _windowLabel,
                 8,
                 topColor: changeColor,
               )
               : _stackText(
-                '$changePrefix${change24h.toStringAsFixed(2)}%',
+                '$changePrefix${changePct.toStringAsFixed(2)}%',
                 fontSize,
-                '24h',
+                _windowLabel,
                 8,
                 topColor: changeColor,
               ),
+    );
+    final change = Tooltip(
+      message: 'Toggle 24h / 7d',
+      child: InkWell(
+        onTap: () => setState(() => _show7d = !_show7d),
+        child: changeBox,
+      ),
     );
     if (useColumn) {
       return [
@@ -431,7 +435,9 @@ class _DashCardState extends State<DashCard> {
         space: '',
       ),
       secondaryText: result.currency,
-      changePercent24h: _calculateChange24h(result.priceData),
+      changePercent24h: _calculateChange(result.priceData),
+      changeLabel: _windowLabel,
+      note: _show7d ? 'Last 7 days' : 'Last 24 hours',
       values: sparklineData.sparkline,
       timestamps: sparklineData.sparklineTimestamps,
     );

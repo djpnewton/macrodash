@@ -255,6 +255,7 @@ Future<void> showLargeSparkline(
   double? changePercent24h,
   required List<num?> values,
   List<int>? timestamps,
+  String changeLabel = '24h',
   String note = 'Last 7 days',
 }) {
   if (values.length < 2) {
@@ -367,7 +368,7 @@ Future<void> showLargeSparkline(
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            '24h',
+                            changeLabel,
                             style: TextStyle(
                               fontSize: 12,
                               color:

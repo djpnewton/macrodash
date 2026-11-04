@@ -569,14 +569,37 @@ class DashPanel extends StatefulWidget {
   State<DashPanel> createState() => _DashPanelState();
 }
 
-class _DashPanelState extends State<DashPanel> {
+class _DashPanelState extends State<DashPanel> with WidgetsBindingObserver {
   Key _refreshKey = UniqueKey();
+  DateTime _lastRefresh = DateTime.now();
   DashTickers _tickers = DashTickers(tickers: []);
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadTickers();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshIfStale();
+    }
+  }
+
+  Future<void> _refreshIfStale() async {
+    final minutes = Settings.loadAutoRefreshMinutes(await Settings.getPrefs());
+    if (!mounted || minutes <= 0) return;
+    if (DateTime.now().difference(_lastRefresh) >= Duration(minutes: minutes)) {
+      await _refreshTickers();
+    }
   }
 
   Future<void> _loadTickers() async {
@@ -588,6 +611,7 @@ class _DashPanelState extends State<DashPanel> {
 
   Future<void> _refreshTickers() async {
     setState(() {
+      _lastRefresh = DateTime.now();
       _refreshKey = UniqueKey();
     });
   }

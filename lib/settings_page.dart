@@ -13,6 +13,7 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   ChartLibrary _selectedChartLibrary = ChartLibrary.flChart;
   ThemeMode _selectedThemeMode = defaultThemeMode;
+  int _autoRefreshMinutes = Settings.defaultAutoRefreshMinutes;
 
   @override
   void initState() {
@@ -25,6 +26,7 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() {
       _selectedChartLibrary = Settings.loadChartLibrary(prefs);
       _selectedThemeMode = Settings.loadThemeMode(prefs);
+      _autoRefreshMinutes = Settings.loadAutoRefreshMinutes(prefs);
     });
   }
 
@@ -76,6 +78,27 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ],
               ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Refresh tickers when reopened after:',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            DropdownButton<int>(
+              value: _autoRefreshMinutes,
+              items: [
+                for (final minutes in Settings.autoRefreshMinuteOptions)
+                  DropdownMenuItem(
+                    value: minutes,
+                    child: Text(minutes == 0 ? 'Never' : '$minutes min'),
+                  ),
+              ],
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() => _autoRefreshMinutes = value);
+                Settings.saveAutoRefreshMinutes(value);
+              },
             ),
             const SizedBox(height: 20),
             const Text(

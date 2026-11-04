@@ -16,6 +16,20 @@ final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier<ThemeMode>(
 class Settings {
   static const String _chartLibraryKey = 'chartLibrary_b2';
   static const String _themeModeKey = 'themeMode';
+  static const String _autoRefreshMinutesKey = 'autoRefreshMinutes';
+
+  /// Minutes of idle time after which tickers reload when the window is
+  /// activated again; 0 disables it.
+  static const int defaultAutoRefreshMinutes = 5;
+  static const List<int> autoRefreshMinuteOptions = [0, 1, 5, 15, 30, 60];
+
+  static Future<void> saveAutoRefreshMinutes(int minutes) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_autoRefreshMinutesKey, minutes);
+  }
+
+  static int loadAutoRefreshMinutes(SharedPreferences prefs) =>
+      prefs.getInt(_autoRefreshMinutesKey) ?? defaultAutoRefreshMinutes;
 
   static Future<SharedPreferences> getPrefs() async {
     return await SharedPreferences.getInstance();

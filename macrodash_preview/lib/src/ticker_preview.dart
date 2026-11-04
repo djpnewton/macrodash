@@ -231,6 +231,7 @@ class PreviewData {
     final years = switch (range) {
       DataRange.oneDay => 1 / 365,
       DataRange.fiveDays => 5 / 365,
+      DataRange.sevenDays => 7 / 365,
       DataRange.oneMonth => 1 / 12,
       DataRange.threeMonths => 3 / 12,
       DataRange.sixMonths => 6 / 12,

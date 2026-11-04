@@ -39,6 +39,7 @@ class VersionInfo extends Equatable {
 enum DataRange {
   oneDay,
   fiveDays,
+  sevenDays,
   oneMonth,
   threeMonths,
   sixMonths,

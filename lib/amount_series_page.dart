@@ -32,6 +32,7 @@ mixin ZoomMixin<T extends StatefulWidget> on State<T> {
         final years = switch (zoomLevel) {
           DataRange.oneDay => 1 / 365,
           DataRange.fiveDays => 5 / 365,
+          DataRange.sevenDays => 7 / 365,
           DataRange.oneMonth => 1 / 12,
           DataRange.threeMonths => 3 / 12,
           DataRange.sixMonths => 6 / 12,

@@ -76,6 +76,7 @@ class MarketData extends AbstractDownloader {
     final rangeStr = switch (range) {
       DataRange.oneDay => '1d',
       DataRange.fiveDays => '5d',
+      DataRange.sevenDays => '7d',
       DataRange.oneMonth => '1mo',
       DataRange.threeMonths => '3mo',
       DataRange.sixMonths => '6mo',
@@ -860,6 +861,7 @@ class MarketData extends AbstractDownloader {
         switch (range) {
           DataRange.oneDay => '1m',
           DataRange.fiveDays => '1m',
+          DataRange.sevenDays => '1m',
           DataRange.oneMonth => '1h',
           DataRange.threeMonths => '1h',
           DataRange.sixMonths => '1h',
@@ -892,58 +894,39 @@ class MarketData extends AbstractDownloader {
       );
     }
 
-    final rawTicker2Data = await _yahooData(ticker2, range);
+    final rawTicker2Data =
+        await _yahooData(ticker2, range, interval: yahooInterval);
     if (rawTicker2Data == null) {
       _log.warning('Failed to download data for ticker: $ticker2');
       return null;
     }
-    // Quantize the dates to the day
-    final quantizedTicker1Data = <AmountEntry>[];
-    for (var i = 0; i < rawTicker1Data.priceData.length; i++) {
-      final date = DateTime(
-        rawTicker1Data.priceData[i].date.year,
-        rawTicker1Data.priceData[i].date.month,
-        rawTicker1Data.priceData[i].date.day,
-      );
-      quantizedTicker1Data.add(
-        AmountEntry(date: date, amount: rawTicker1Data.priceData[i].amount),
-      );
-    }
-    final quantizedTicker2Data = <AmountEntry>[];
-    for (var i = 0; i < rawTicker2Data.priceData.length; i++) {
-      final date = DateTime(
-        rawTicker2Data.priceData[i].date.year,
-        rawTicker2Data.priceData[i].date.month,
-        rawTicker2Data.priceData[i].date.day,
-      );
-      quantizedTicker2Data.add(
-        AmountEntry(date: date, amount: rawTicker2Data.priceData[i].amount),
-      );
-    }
-
-    // Combine the data for both tickers
+    // Only keep points where both tickers have data in the same time bucket
+    // (the day for daily data, otherwise the sample interval).
+    DateTime bucket(DateTime date) => switch (yahooInterval) {
+          '1m' => DateTime(
+              date.year,
+              date.month,
+              date.day,
+              date.hour,
+              date.minute,
+            ),
+          '1h' => DateTime(date.year, date.month, date.day, date.hour),
+          _ => DateTime(date.year, date.month, date.day),
+        };
+    final ticker2Map = <DateTime, double>{
+      for (final entry in rawTicker2Data.priceData)
+        bucket(entry.date): entry.amount,
+    };
     final combinedData = <AmountEntry>[];
-    // map of ticker2 date to amount
-    final ticker2Map = <DateTime, double>{};
-    for (var i = 0; i < quantizedTicker2Data.length; i++) {
-      final date = quantizedTicker2Data[i].date;
-      final amount = quantizedTicker2Data[i].amount;
-      ticker2Map[date] = amount;
-    }
-    // iterate over ticker1 data and divide by ticker2 data
-    for (var i = 0; i < quantizedTicker1Data.length; i++) {
-      final date = quantizedTicker1Data[i].date;
-      final amount1 = quantizedTicker1Data[i].amount;
-      // if ticker2Map does not contain the date, skip it
-      if (!ticker2Map.containsKey(date)) {
+    final seen = <DateTime>{};
+    for (final entry in rawTicker1Data.priceData) {
+      final key = bucket(entry.date);
+      final amount2 = ticker2Map[key];
+      // skip buckets without a counterpart, duplicates and division by zero
+      if (amount2 == null || amount2 == 0 || !seen.add(key)) {
         continue;
       }
-      final amount2 = ticker2Map[date]!;
-      // avoid division by zero
-      if (amount2 == 0) {
-        continue;
-      }
-      combinedData.add(AmountEntry(date: date, amount: amount1 / amount2));
+      combinedData.add(AmountEntry(date: key, amount: entry.amount / amount2));
     }
     _log
       ..info('rawTicker1Data: ${rawTicker1Data.priceData.length}')

@@ -206,7 +206,7 @@ class _DashCardState extends State<DashCard> {
     final api = ServerApi();
     final result = await api.fetchCustomTicker(
       widget.ticker,
-      DataRange.fiveDays,
+      DataRange.sevenDays,
     );
     switch (result) {
       case Ok():

@@ -272,10 +272,25 @@ Future<void> showLargeSparkline(
       final day = DateTime(date.year, date.month, date.day);
       firstIndexByDay.putIfAbsent(day.millisecondsSinceEpoch, () => i);
     }
-    for (final entry in firstIndexByDay.entries) {
-      dayFractions.add(entry.value / (values.length - 1));
+    final days = firstIndexByDay.entries.toList();
+    int countFor(int d) =>
+        (d + 1 < days.length ? days[d + 1].value : values.length) -
+        days[d].value;
+    var fullDay = 0;
+    for (var d = 0; d < days.length; d++) {
+      fullDay = math.max(fullDay, countFor(d));
+    }
+    for (var d = 0; d < days.length; d++) {
+      // Skip days without full data (e.g. a Sunday-evening open); the first
+      // and last days are partial by nature of the window, so keep them.
+      if (d > 0 && d < days.length - 1 && countFor(d) < fullDay * 0.5) {
+        continue;
+      }
+      dayFractions.add(days[d].value / (values.length - 1));
       dayLabels.add(
-        DateFormat('E').format(DateTime.fromMillisecondsSinceEpoch(entry.key)),
+        DateFormat(
+          'E',
+        ).format(DateTime.fromMillisecondsSinceEpoch(days[d].key)),
       );
     }
   }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:macrodash_models/models.dart';
 import 'package:logging/logging.dart';
@@ -172,7 +174,25 @@ class _TickerConfigState extends State<TickerConfig> {
   }
 }
 
-enum DashState { loading, error, loaded }
+enum DashState {
+  /// First load, nothing to show yet.
+  loading,
+
+  /// First load failed, nothing to show.
+  error,
+
+  /// Showing data while a reload is in flight.
+  reloading,
+
+  /// Showing data that is older than the refresh interval, or whose last
+  /// reload failed.
+  stale,
+
+  /// Showing current data.
+  loaded;
+
+  bool get hasData => this != loading && this != error;
+}
 
 class DashCard extends StatefulWidget {
   final DashTicker ticker;
@@ -180,9 +200,14 @@ class DashCard extends StatefulWidget {
   final VoidCallback? onRemove;
   final VoidCallback? onTitleTap;
 
+  /// Changing this reloads the data in the background, keeping the current
+  /// data visible meanwhile.
+  final int refreshToken;
+
   const DashCard({
     super.key,
     required this.ticker,
+    this.refreshToken = 0,
     this.onConfig,
     this.onRemove,
     this.onTitleTap,
@@ -192,7 +217,7 @@ class DashCard extends StatefulWidget {
   State<DashCard> createState() => _DashCardState();
 }
 
-class _DashCardState extends State<DashCard> {
+class _DashCardState extends State<DashCard> with TickerProviderStateMixin {
   DashState _state = DashState.loading;
   CustomTickerResult? _customTickerResult;
   bool _show7d = false;
@@ -201,27 +226,103 @@ class _DashCardState extends State<DashCard> {
       _show7d ? const Duration(days: 7) : const Duration(hours: 24);
   String get _windowLabel => _show7d ? '7d' : '24h';
 
+  static const _reloadTimeout = Duration(seconds: 20);
+
+  int _loadId = 0;
+  DateTime _loadedAt = DateTime.now();
+  Timer? _staleTimer;
+
   @override
   void initState() {
     super.initState();
+    _staleTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => _checkStale(),
+    );
     _loadTickerData();
   }
 
+  /// Data goes stale after the auto-refresh interval (15 minutes when
+  /// auto-refresh is off); a failed reload marks it stale immediately.
+  Future<void> _checkStale() async {
+    final minutes = Settings.loadAutoRefreshMinutes(await Settings.getPrefs());
+    if (!mounted || _state != DashState.loaded) return;
+    final limit = Duration(minutes: minutes > 0 ? minutes : 15);
+    if (DateTime.now().difference(_loadedAt) >= limit) {
+      setState(() => _state = DashState.stale);
+    }
+  }
+
+  // Creeps towards 90% while waiting, then fills up when the request is done.
+  late final AnimationController _progress = AnimationController(vsync: this);
+  late final AnimationController _shine = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  );
+
+  @override
+  void dispose() {
+    _staleTimer?.cancel();
+    _progress.dispose();
+    _shine.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(DashCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.refreshToken != widget.refreshToken) {
+      _loadTickerData();
+    }
+  }
+
   Future<void> _loadTickerData() async {
-    final api = ServerApi();
-    final result = await api.fetchCustomTicker(
-      widget.ticker,
-      DataRange.sevenDays,
-    );
+    final id = ++_loadId;
+    final hasData = _state.hasData;
+    if (hasData) {
+      setState(() => _state = DashState.reloading);
+      _progress
+        ..value = 0
+        ..animateTo(
+          0.9,
+          duration: const Duration(seconds: 10),
+          curve: Curves.easeOut,
+        );
+    } else {
+      setState(() => _state = DashState.loading);
+    }
+    Result<CustomTickerResult> result;
+    try {
+      result = await ServerApi()
+          .fetchCustomTicker(widget.ticker, DataRange.sevenDays)
+          .timeout(_reloadTimeout);
+    } on TimeoutException {
+      result = Result.error(Exception('Timed out'));
+    }
+    // A newer load superseded this one.
+    if (!mounted || id != _loadId) return;
     switch (result) {
       case Ok():
         setState(() {
-          _state = DashState.loaded;
-          _customTickerResult = result.value;
+          _customTickerResult = (result as Ok<CustomTickerResult>).value;
+          _loadedAt = DateTime.now();
+          if (!hasData) _state = DashState.loaded;
         });
+        if (hasData) {
+          await _progress.animateTo(
+            1,
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOut,
+          );
+          if (!mounted || id != _loadId) return;
+          setState(() => _state = DashState.loaded);
+        }
+        _shine.forward(from: 0);
       case Error():
+        _progress.stop();
         setState(() {
-          _state = DashState.error;
+          // Keep showing the old data if a reload fails.
+          _state = hasData ? DashState.stale : DashState.error;
         });
     }
   }
@@ -453,94 +554,136 @@ class _DashCardState extends State<DashCard> {
     final subtitle = result.longName == title ? '' : result.longName;
 
     return Card(
-      //margin: const EdgeInsets.all(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            // Stock name
-            SizedBox(
-              width: 100,
-              height: 35,
-              child: _stackText(
-                title,
-                16,
-                subtitle,
-                8,
-                topWidget: TextButton(
-                  onPressed: widget.onTitleTap,
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                    maxLines: 1,
-                    softWrap: false,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 4),
-            // stock value and 24h change
-            ..._buildPriceWidgets(useColumn),
-            const SizedBox(width: 4),
-            Expanded(child: SizedBox()),
-            // Sparkline
-            Tooltip(
-              message: 'Show larger chart',
-              child: InkWell(
-                onTap: () => _showLargeSparkline(context, sparklineData),
-                child: SizedBox(
-                  width: 110,
-                  height: 25,
-                  child: CustomPaint(
-                    painter: SparkPainter(
-                      sparklineData.sparkline,
-                      timestamps: sparklineData.sparklineTimestamps,
-                      colorUp: context.appColors.gain,
-                      colorDown: context.appColors.loss,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 4),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                // Config button
-                IconButton(
-                  icon: const Icon(Icons.settings, size: 12),
-                  tooltip: 'Configure',
-                  onPressed: widget.onConfig,
-                  // make it smaller
-                  padding: const EdgeInsets.all(2),
-                  constraints: const BoxConstraints(),
-                  style: const ButtonStyle(
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                // Stock name
+                SizedBox(
+                  width: 100,
+                  height: 35,
+                  child: _stackText(
+                    title,
+                    16,
+                    subtitle,
+                    8,
+                    topWidget: TextButton(
+                      onPressed: widget.onTitleTap,
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 4),
-                // Remove button
-                IconButton(
-                  icon: const Icon(Icons.remove_circle, size: 12),
-                  tooltip: 'Remove',
-                  onPressed: widget.onRemove,
-                  // make it smaller
-                  padding: const EdgeInsets.all(2),
-                  constraints: const BoxConstraints(),
-                  style: const ButtonStyle(
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                const SizedBox(width: 4),
+                // stock value and 24h change
+                ..._buildPriceWidgets(useColumn),
+                const SizedBox(width: 4),
+                Expanded(child: SizedBox()),
+                // Sparkline
+                Tooltip(
+                  message: 'Show larger chart',
+                  child: InkWell(
+                    onTap: () => _showLargeSparkline(context, sparklineData),
+                    child: SizedBox(
+                      width: 110,
+                      height: 25,
+                      child: CustomPaint(
+                        painter: SparkPainter(
+                          sparklineData.sparkline,
+                          timestamps: sparklineData.sparklineTimestamps,
+                          colorUp: context.appColors.gain,
+                          colorDown: context.appColors.loss,
+                        ),
+                      ),
+                    ),
                   ),
+                ),
+                const SizedBox(width: 4),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Config button
+                    IconButton(
+                      icon: const Icon(Icons.settings, size: 12),
+                      tooltip: 'Configure',
+                      onPressed: widget.onConfig,
+                      // make it smaller
+                      padding: const EdgeInsets.all(2),
+                      constraints: const BoxConstraints(),
+                      style: const ButtonStyle(
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    // Remove button
+                    IconButton(
+                      icon: const Icon(Icons.remove_circle, size: 12),
+                      tooltip: 'Remove',
+                      onPressed: widget.onRemove,
+                      // make it smaller
+                      padding: const EdgeInsets.all(2),
+                      constraints: const BoxConstraints(),
+                      style: const ButtonStyle(
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: AnimatedOpacity(
+              opacity: _state == DashState.reloading ? 1 : 0,
+              duration: const Duration(milliseconds: 300),
+              child: AnimatedBuilder(
+                animation: _progress,
+                builder:
+                    (context, _) => LinearProgressIndicator(
+                      value: _progress.value,
+                      minHeight: 2,
+                    ),
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: AnimatedOpacity(
+                opacity: _state == DashState.stale ? 1 : 0,
+                duration: const Duration(milliseconds: 400),
+                child: ColoredBox(color: Colors.grey.withValues(alpha: 0.25)),
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: AnimatedBuilder(
+                animation: _shine,
+                builder:
+                    (context, _) =>
+                        _shine.isAnimating
+                            ? CustomPaint(painter: _ShinePainter(_shine.value))
+                            : const SizedBox.shrink(),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -554,6 +697,8 @@ class _DashCardState extends State<DashCard> {
         return const Card(
           child: Center(child: Text('Error loading ticker data')),
         );
+      case DashState.reloading:
+      case DashState.stale:
       case DashState.loaded:
         return _buildTickerCard(context);
     }
@@ -570,7 +715,7 @@ class DashPanel extends StatefulWidget {
 }
 
 class _DashPanelState extends State<DashPanel> with WidgetsBindingObserver {
-  Key _refreshKey = UniqueKey();
+  int _refreshToken = 0;
   DateTime _lastRefresh = DateTime.now();
   DashTickers _tickers = DashTickers(tickers: []);
 
@@ -612,7 +757,7 @@ class _DashPanelState extends State<DashPanel> with WidgetsBindingObserver {
   Future<void> _refreshTickers() async {
     setState(() {
       _lastRefresh = DateTime.now();
-      _refreshKey = UniqueKey();
+      _refreshToken++;
     });
   }
 
@@ -671,10 +816,8 @@ class _DashPanelState extends State<DashPanel> with WidgetsBindingObserver {
             );
           }
           return DashCard(
-            key: ValueKey<(DashTicker, Key)>((
-              _tickers.tickers[index],
-              _refreshKey,
-            )),
+            key: ValueKey<DashTicker>(_tickers.tickers[index]),
+            refreshToken: _refreshToken,
             ticker: _tickers.tickers[index],
             onTitleTap: () async {
               final ticker = _tickers.tickers[index];
@@ -766,4 +909,30 @@ class _DashPanelState extends State<DashPanel> with WidgetsBindingObserver {
       ),
     );
   }
+}
+
+/// A soft diagonal highlight sweeping left to right as [t] goes 0 -> 1.
+class _ShinePainter extends CustomPainter {
+  _ShinePainter(this.t);
+
+  final double t;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final band = size.width * 0.35;
+    final x = -band + (size.width + band) * Curves.easeInOut.transform(t);
+    final paint =
+        Paint()
+          ..shader = LinearGradient(
+            colors: [
+              Colors.white.withValues(alpha: 0),
+              Colors.white.withValues(alpha: 0.18),
+              Colors.white.withValues(alpha: 0),
+            ],
+          ).createShader(Rect.fromLTWH(x, 0, band, size.height));
+    canvas.drawRect(Offset.zero & size, paint);
+  }
+
+  @override
+  bool shouldRepaint(_ShinePainter oldDelegate) => oldDelegate.t != t;
 }

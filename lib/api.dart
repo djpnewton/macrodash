@@ -39,6 +39,26 @@ class ServerApi {
     }
   }
 
+  /// Parses a downloaded [body] with [fromJson], so a malformed payload
+  /// becomes an error result instead of an exception.
+  Result<T> parseResponse<T>(
+    String body,
+    T Function(Map<String, dynamic> json) fromJson,
+    String url,
+  ) {
+    try {
+      final json = jsonDecode(body);
+      if (json is! Map<String, dynamic>) {
+        log.severe('Failed to parse data from $url');
+        return Result.error(Exception('Failed to parse data from $url'));
+      }
+      return Result.ok(fromJson(json));
+    } catch (e) {
+      log.severe('Failed to parse data from $url: $e');
+      return Result.error(Exception('Failed to parse data from $url'));
+    }
+  }
+
   /// Fetch server version information.
   Future<Result<VersionInfo>> serverVersion() async {
     const url = '$macrodashServerUrl/version';
@@ -46,14 +66,7 @@ class ServerApi {
     switch (result) {
       case Ok():
         log.info('Version data downloaded successfully from $url');
-        final versionJson = jsonDecode(result.value);
-        if (versionJson == null) {
-          log.severe('Failed to parse version data from $url');
-          return Result.error(Exception('Failed to parse version data'));
-        }
-        final versionInfo = VersionInfo.fromJson(versionJson);
-        log.info('Version data downloaded successfully from $url');
-        return Result.ok(versionInfo);
+        return parseResponse(result.value, VersionInfo.fromJson, url);
       case Error():
         log.severe('Failed to download version data from $url');
         return Result.error(Exception(result.error));
@@ -68,12 +81,7 @@ class ServerApi {
     switch (result) {
       case Ok():
         log.info('M2 data downloaded successfully from $url');
-        final m2json = jsonDecode(result.value);
-        if (m2json == null) {
-          log.severe('Failed to parse M2 data from $url');
-          return Result.error(Exception('Failed to parse M2 data'));
-        }
-        return Result.ok(AmountSeries.fromJson(m2json));
+        return parseResponse(result.value, AmountSeries.fromJson, url);
       case Error():
         log.severe('Failed to download M2 data from $url');
         return Result.error(Exception(result.error));
@@ -88,12 +96,7 @@ class ServerApi {
     switch (result) {
       case Ok():
         log.info('Debt data downloaded successfully from $url');
-        final debtJson = jsonDecode(result.value);
-        if (debtJson == null) {
-          log.severe('Failed to parse debt data from $url');
-          return Result.error(Exception('Failed to parse debt data'));
-        }
-        return Result.ok(AmountSeries.fromJson(debtJson));
+        return parseResponse(result.value, AmountSeries.fromJson, url);
       case Error():
         log.severe('Failed to download debt data from $url');
         return Result.error(Exception(result.error));
@@ -111,12 +114,7 @@ class ServerApi {
     switch (result) {
       case Ok():
         log.info('Bond rate data downloaded successfully from $url');
-        final bondRateJson = jsonDecode(result.value);
-        if (bondRateJson == null) {
-          log.severe('Failed to parse bond rate data from $url');
-          return Result.error(Exception('Failed to parse bond rate data'));
-        }
-        return Result.ok(AmountSeries.fromJson(bondRateJson));
+        return parseResponse(result.value, AmountSeries.fromJson, url);
       case Error():
         log.severe('Failed to download bond rate data from $url');
         return Result.error(Exception(result.error));
@@ -139,12 +137,7 @@ class ServerApi {
     switch (result) {
       case Ok():
         log.info('Market index data downloaded successfully from $url');
-        final marketIndexJson = jsonDecode(result.value);
-        if (marketIndexJson == null) {
-          log.severe('Failed to parse market index data from $url');
-          return Result.error(Exception('Failed to parse market index data'));
-        }
-        return Result.ok(AmountSeries.fromJson(marketIndexJson));
+        return parseResponse(result.value, AmountSeries.fromJson, url);
       case Error():
         log.severe('Failed to download market index data from $url');
         return Result.error(Exception(result.error));
@@ -162,12 +155,7 @@ class ServerApi {
     switch (result) {
       case Ok():
         log.info('Futures data downloaded successfully from $url');
-        final futuresJson = jsonDecode(result.value);
-        if (futuresJson == null) {
-          log.severe('Failed to parse futures data from $url');
-          return Result.error(Exception('Failed to parse futures data'));
-        }
-        return Result.ok(AmountSeries.fromJson(futuresJson));
+        return parseResponse(result.value, AmountSeries.fromJson, url);
       case Error():
         log.severe('Failed to download futures data from $url');
         return Result.error(Exception(result.error));
@@ -223,12 +211,7 @@ class ServerApi {
     switch (result) {
       case Ok():
         log.info('Market cap data downloaded successfully from $url');
-        final marketCapJson = jsonDecode(result.value);
-        if (marketCapJson == null) {
-          log.severe('Failed to parse market cap data from $url');
-          return Result.error(Exception('Failed to parse market cap data'));
-        }
-        return Result.ok(MarketCapSeries.fromJson(marketCapJson));
+        return parseResponse(result.value, MarketCapSeries.fromJson, url);
       case Error():
         log.severe('Failed to download market cap data from $url');
         return Result.error(Exception(result.error));
@@ -243,14 +226,7 @@ class ServerApi {
     switch (result) {
       case Ok():
         log.info('Yahoo sparkline data downloaded successfully from $url');
-        final sparklineJson = jsonDecode(result.value);
-        if (sparklineJson == null) {
-          log.severe('Failed to parse Yahoo sparkline data from $url');
-          return Result.error(
-            Exception('Failed to parse Yahoo sparkline data'),
-          );
-        }
-        return Result.ok(YahooSparklineData.fromJson(sparklineJson));
+        return parseResponse(result.value, YahooSparklineData.fromJson, url);
       case Error():
         log.severe('Failed to download Yahoo sparkline data from $url');
         return Result.error(Exception(result.error));
@@ -272,12 +248,7 @@ class ServerApi {
     switch (result) {
       case Ok():
         log.info('Custom ticker data downloaded successfully from $url');
-        final customTickerJson = jsonDecode(result.value);
-        if (customTickerJson == null) {
-          log.severe('Failed to parse custom ticker data from $url');
-          return Result.error(Exception('Failed to parse custom ticker data'));
-        }
-        return Result.ok(CustomTickerResult.fromJson(customTickerJson));
+        return parseResponse(result.value, CustomTickerResult.fromJson, url);
       case Error():
         log.severe('Failed to download custom ticker data from $url');
         return Result.error(Exception(result.error));
@@ -291,12 +262,7 @@ class ServerApi {
     switch (result) {
       case Ok():
         log.info('Ticker list downloaded successfully from $url');
-        final tickerSearchJson = jsonDecode(result.value);
-        if (tickerSearchJson == null) {
-          log.severe('Failed to parse ticker list data from $url');
-          return Result.error(Exception('Failed to parse ticker list data'));
-        }
-        return Result.ok(TickerSearchResult.fromJson(tickerSearchJson));
+        return parseResponse(result.value, TickerSearchResult.fromJson, url);
       case Error():
         log.severe('Failed to download ticker list data from $url');
         return Result.error(Exception(result.error));

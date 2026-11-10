@@ -300,6 +300,10 @@ class _DashCardState extends State<DashCard> with TickerProviderStateMixin {
           .timeout(_reloadTimeout);
     } on TimeoutException {
       result = Result.error(Exception('Timed out'));
+    } catch (e) {
+      // Never leave the card spinning on an unexpected error.
+      _log.severe('Failed to load ${widget.ticker.ticker1}: $e');
+      result = Result.error(Exception(e));
     }
     // A newer load superseded this one.
     if (!mounted || id != _loadId) return;

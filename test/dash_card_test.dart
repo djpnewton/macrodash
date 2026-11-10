@@ -29,7 +29,8 @@ Map<String, dynamic> _tickerJson(
 /// Pumps a single dashboard card that is answered with [json].
 Future<void> _pumpCard(
   WidgetTester tester, {
-  required Map<String, dynamic> json,
+  Map<String, dynamic> json = const {},
+  String? rawBody,
   int statusCode = 200,
   DashTicker ticker = const DashTicker(
     title: 'Tesla',
@@ -129,10 +130,18 @@ void main() {
   testWidgets('shows the handle and an error message when loading fails', (
     tester,
   ) async {
-    await _pumpCard(tester, json: const {}, statusCode: 500);
+    await _pumpCard(tester, statusCode: 500);
 
     expect(find.text('Error loading ticker data'), findsOneWidget);
     expect(find.byIcon(Icons.drag_indicator), findsOneWidget);
+  });
+
+  testWidgets('shows an error instead of spinning on a malformed response', (
+    tester,
+  ) async {
+    await _pumpCard(tester, rawBody: '<html>bad gateway</html>');
+
+    expect(find.text('Error loading ticker data'), findsOneWidget);
   });
 
   testWidgets('only shows a subtitle that adds something', (tester) async {

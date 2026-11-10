@@ -132,6 +132,67 @@ void main() {
 
       expect(result, isA<Error<CustomTickerResult>>());
     });
+
+    test('returns an error result for a body that is not json', () async {
+      final result = await _withResponse(
+        () => ServerApi().fetchCustomTicker(
+          const DashTicker(title: null, ticker1: 'TSLA', ticker2: null),
+          DataRange.sevenDays,
+        ),
+        http.Response('<html>bad gateway</html>', 200),
+      );
+
+      expect(result, isA<Error<CustomTickerResult>>());
+    });
+
+    test(
+      'returns an error result for json that does not match the parser',
+      () async {
+        final result = await _withResponse(
+          () => ServerApi().fetchCustomTicker(
+            const DashTicker(title: null, ticker1: 'TSLA', ticker2: null),
+            DataRange.sevenDays,
+          ),
+          http.Response(jsonEncode([1, 2, 3]), 200),
+        );
+
+        expect(result, isA<Error<CustomTickerResult>>());
+      },
+    );
+
+    test('returns an error result for json missing expected fields', () async {
+      final result = await _withResponse(
+        () => ServerApi().fetchCustomTicker(
+          const DashTicker(title: null, ticker1: 'TSLA', ticker2: null),
+          DataRange.sevenDays,
+        ),
+        http.Response(jsonEncode({'ticker1': 'TSLA'}), 200),
+      );
+
+      expect(result, isA<Error<CustomTickerResult>>());
+    });
+  });
+
+  group('parseResponse', () {
+    test('parses a json object with the given factory', () {
+      final result = ServerApi().parseResponse(
+        jsonEncode(_customTickerJson),
+        CustomTickerResult.fromJson,
+        'url',
+      );
+
+      expect((result as Ok<CustomTickerResult>).value.shortName, 'Tesla');
+    });
+
+    test('returns an error result when json is null', () {
+      final result = ServerApi().parseResponse(
+        'null',
+        CustomTickerResult.fromJson,
+        'url',
+      );
+
+      expect(result, isA<Error<CustomTickerResult>>());
+    });
   });
 
   group('searchTicker', () {

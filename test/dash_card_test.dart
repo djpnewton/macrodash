@@ -8,30 +8,16 @@ import 'package:macrodash/dash.dart';
 import 'package:macrodash/theme.dart';
 import 'package:macrodash_models/models.dart';
 
-Map<String, dynamic> _tickerJson(
-  List<(DateTime, double)> prices, {
-  String shortName = 'Tesla',
-  String longName = 'Tesla Inc',
-}) => {
-  'ticker1': 'TSLA',
-  'ticker2': null,
-  'shortName': shortName,
-  'longName': longName,
-  'sources': ['yahoo'],
-  'priceData': [
-    for (final (date, amount) in prices)
-      {'date': date.toIso8601String(), 'amount': amount},
-  ],
-  'dividendData': <Object>[],
-  'currency': 'USD',
-};
+import 'support/dash_harness.dart';
 
-/// Pumps a single dashboard card that is answered with [json].
+/// Pumps a single dashboard card, answered with [prices] unless [client] is
+/// given.
 Future<void> _pumpCard(
   WidgetTester tester, {
-  Map<String, dynamic> json = const {},
-  String? rawBody,
-  int statusCode = 200,
+  List<(DateTime, double)>? prices,
+  String shortName = 'Tesla',
+  String longName = 'Tesla Inc',
+  MockClient? client,
   DashTicker ticker = const DashTicker(
     title: 'Tesla',
     ticker1: 'TSLA',
@@ -65,7 +51,17 @@ Future<void> _pumpCard(
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
     },
-    () => MockClient((_) async => http.Response(jsonEncode(json), statusCode)),
+    () =>
+        client ??
+        tickerClient(
+          body: jsonEncode(
+            tickerResponse(
+              prices: prices,
+              shortName: shortName,
+              longName: longName,
+            ),
+          ),
+        ),
   );
 }
 
@@ -76,11 +72,11 @@ void main() {
     final now = DateTime.now();
     await _pumpCard(
       tester,
-      json: _tickerJson([
+      prices: [
         (now.subtract(const Duration(days: 6)), 100),
         (now.subtract(const Duration(hours: 12)), 200),
         (now, 210),
-      ]),
+      ],
     );
 
     expect(find.text('+5.00%'), findsOneWidget);
@@ -103,11 +99,11 @@ void main() {
     final now = DateTime.now();
     await _pumpCard(
       tester,
-      json: _tickerJson([
+      prices: [
         (now.subtract(const Duration(days: 6)), 300),
         (now.subtract(const Duration(hours: 12)), 200),
         (now, 150),
-      ]),
+      ],
     );
 
     expect(find.text('-25.00%'), findsOneWidget);
@@ -117,10 +113,7 @@ void main() {
     final now = DateTime.now();
     await _pumpCard(
       tester,
-      json: _tickerJson([
-        (now.subtract(const Duration(hours: 1)), 100),
-        (now, 110),
-      ]),
+      prices: [(now.subtract(const Duration(hours: 1)), 100), (now, 110)],
     );
 
     expect(find.byIcon(Icons.drag_indicator), findsOneWidget);
@@ -130,7 +123,7 @@ void main() {
   testWidgets('shows the handle and an error message when loading fails', (
     tester,
   ) async {
-    await _pumpCard(tester, statusCode: 500);
+    await _pumpCard(tester, client: tickerClient(statusCode: 500));
 
     expect(find.text('Error loading ticker data'), findsOneWidget);
     expect(find.byIcon(Icons.drag_indicator), findsOneWidget);
@@ -139,7 +132,10 @@ void main() {
   testWidgets('shows an error instead of spinning on a malformed response', (
     tester,
   ) async {
-    await _pumpCard(tester, rawBody: '<html>bad gateway</html>');
+    await _pumpCard(
+      tester,
+      client: tickerClient(body: '<html>bad gateway</html>'),
+    );
 
     expect(find.text('Error loading ticker data'), findsOneWidget);
   });
@@ -150,19 +146,24 @@ void main() {
       (now.subtract(const Duration(hours: 1)), 100),
       (now, 110),
     ];
+    const unnamed = DashTicker(title: null, ticker1: 'TSLA', ticker2: null);
 
     await _pumpCard(
       tester,
-      ticker: const DashTicker(title: null, ticker1: 'TSLA', ticker2: null),
-      json: _tickerJson(prices, shortName: 'Tesla', longName: 'Tesla Inc'),
+      ticker: unnamed,
+      prices: prices,
+      shortName: 'Tesla',
+      longName: 'Tesla Inc',
     );
     expect(find.text('Tesla'), findsOneWidget);
     expect(find.text('Tesla Inc'), findsOneWidget);
 
     await _pumpCard(
       tester,
-      ticker: const DashTicker(title: null, ticker1: 'TSLA', ticker2: null),
-      json: _tickerJson(prices, shortName: 'Tesla', longName: 'Tesla'),
+      ticker: unnamed,
+      prices: prices,
+      shortName: 'Tesla',
+      longName: 'Tesla',
     );
     expect(find.text('Tesla'), findsOneWidget);
   });

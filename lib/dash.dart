@@ -196,6 +196,7 @@ enum DashState {
 
 class DashCard extends StatefulWidget {
   final DashTicker ticker;
+  final Widget dragHandle;
   final VoidCallback? onConfig;
   final VoidCallback? onRemove;
   final VoidCallback? onTitleTap;
@@ -207,6 +208,7 @@ class DashCard extends StatefulWidget {
   const DashCard({
     super.key,
     required this.ticker,
+    required this.dragHandle,
     this.refreshToken = 0,
     this.onConfig,
     this.onRemove,
@@ -544,6 +546,26 @@ class _DashCardState extends State<DashCard> with TickerProviderStateMixin {
     );
   }
 
+  /// A card without data yet
+  Widget _buildPlaceholderCard(Widget child) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          Center(child: child),
+          Positioned(
+            left: 8,
+            top: 0,
+            bottom: 0,
+            child: Center(
+              child: SizedBox(width: 14, height: 35, child: widget.dragHandle),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTickerCard(BuildContext context) {
     assert(_customTickerResult != null, 'Custom ticker result is null');
     final result = _customTickerResult!;
@@ -563,9 +585,16 @@ class _DashCardState extends State<DashCard> with TickerProviderStateMixin {
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
+                // Grab handle
+                SizedBox(
+                  width: 14,
+                  height: 35,
+                  child: Center(child: widget.dragHandle),
+                ),
+                const SizedBox(width: 2),
                 // Stock name
                 SizedBox(
-                  width: 100,
+                  width: 84,
                   height: 35,
                   child: _stackText(
                     title,
@@ -573,6 +602,13 @@ class _DashCardState extends State<DashCard> with TickerProviderStateMixin {
                     subtitle,
                     8,
                     topWidget: TextButton(
+                      style: TextButton.styleFrom(
+                        // The title block lost its handle width, so drop the
+                        // button padding to keep the same text space.
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
                       onPressed: widget.onTitleTap,
                       child: Text(
                         title,
@@ -692,11 +728,9 @@ class _DashCardState extends State<DashCard> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     switch (_state) {
       case DashState.loading:
-        return const Card(child: Center(child: CircularProgressIndicator()));
+        return _buildPlaceholderCard(const CircularProgressIndicator());
       case DashState.error:
-        return const Card(
-          child: Center(child: Text('Error loading ticker data')),
-        );
+        return _buildPlaceholderCard(const Text('Error loading ticker data'));
       case DashState.reloading:
       case DashState.stale:
       case DashState.loaded:
@@ -761,6 +795,28 @@ class _DashPanelState extends State<DashPanel> with WidgetsBindingObserver {
     });
   }
 
+  /// Index of the card currently being dragged, if any.
+  int? _draggingIndex;
+
+  void _setDraggingIndex(int? index) {
+    if (!mounted) return;
+    setState(() => _draggingIndex = index);
+  }
+
+  /// Moves the ticker at [from] into the position of the ticker at [to].
+  void _moveTicker(int from, int to) {
+    if (from == to) return;
+    final tickers = List<DashTicker>.of(_tickers.tickers);
+    final ticker = tickers.removeAt(from);
+    tickers.insert(to, ticker);
+    _log.info('Moved ${ticker.ticker1} to position ${to + 1}');
+    setState(() {
+      _tickers = DashTickers(tickers: tickers);
+    });
+    // save the new order to settings
+    Settings.saveDashTickers(_tickers);
+  }
+
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size;
@@ -774,139 +830,196 @@ class _DashPanelState extends State<DashPanel> with WidgetsBindingObserver {
         physics: const AlwaysScrollableScrollPhysics(),
         shrinkWrap: true,
         itemCount: _tickers.tickers.length + 1,
+        // Keep each card's state (and its loaded data) when the order changes.
+        findChildIndexCallback: (key) {
+          if (key is! ObjectKey) return null;
+          final index = _tickers.tickers.indexWhere(
+            (ticker) => identical(ticker, key.value),
+          );
+          return index < 0 ? null : index;
+        },
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCountAndFixedHeight(
           crossAxisCount: columns > 0 ? columns : 1,
           crossAxisSpacing: 5,
           mainAxisSpacing: 5,
           height: 75.0,
         ),
-        itemBuilder: (context, index) {
-          if (index == _tickers.tickers.length) {
-            return SizedBox(
-              height: 75,
-              child: Center(
-                child: TextButton(
-                  child: Text('Add Ticker'),
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) {
-                        return TickerConfig(
-                          ticker: DashTicker(
-                            title: null,
-                            ticker1: '',
-                            ticker2: '',
-                          ),
-                          onSave: (ticker) {
-                            setState(() {
-                              _tickers = DashTickers(
-                                tickers: _tickers.tickers + [ticker],
-                              );
-                            });
-                            // save the new ticker to settings
-                            Settings.saveDashTickers(_tickers);
-                          },
-                          add: true,
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-            );
-          }
-          return DashCard(
-            key: ValueKey<DashTicker>(_tickers.tickers[index]),
-            refreshToken: _refreshToken,
-            ticker: _tickers.tickers[index],
-            onTitleTap: () async {
-              final ticker = _tickers.tickers[index];
-              _log.info('Tapped on ${ticker.ticker1}');
-              log.info('Navigating to Ticker');
-              context.goNamed(
-                AppPage.ticker.name,
-                queryParameters: {
-                  'title': ticker.title ?? '',
-                  'ticker1': ticker.ticker1,
-                  'ticker2': ticker.ticker2 ?? '',
-                },
-              );
-            },
-            onRemove: () {
-              // are you sure?
-              showDialog<bool?>(
-                context: context,
-                builder: (context) {
-                  return AlertDialog(
-                    title: const Text('Remove Ticker'),
-                    content: const Text(
-                      'Are you sure you want to remove this ticker?',
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop(false);
-                        },
-                        child: const Text('Cancel'),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop(true);
-                        },
-                        child: const Text('Remove'),
-                      ),
-                    ],
-                  );
-                },
-              ).then((result) {
-                if (result == true) {
-                  _log.info('Removing ${_tickers.tickers[index].ticker1}');
-                  setState(() {
-                    _tickers = DashTickers(
-                      tickers:
-                          _tickers.tickers
-                              .where(
-                                (ticker) => ticker != _tickers.tickers[index],
-                              )
-                              .toList(),
-                    );
-                  });
-                  // save the new list to settings
-                  Settings.saveDashTickers(_tickers);
-                }
-              });
-            },
-            onConfig: () {
-              _log.info('Configuring ${_tickers.tickers[index].ticker1}');
-              showDialog(
-                context: context,
-                builder: (context) {
-                  return TickerConfig(
-                    ticker: _tickers.tickers[index],
-                    onSave: (ticker) {
-                      setState(() {
-                        _tickers = DashTickers(
-                          tickers:
-                              _tickers.tickers
-                                  .map(
-                                    (t) =>
-                                        t == _tickers.tickers[index]
-                                            ? ticker
-                                            : t,
-                                  )
-                                  .toList(),
-                        );
-                      });
-                      // save the new ticker to settings
-                      Settings.saveDashTickers(_tickers);
-                    },
-                  );
-                },
-              );
-            },
-          );
-        },
+        itemBuilder:
+            (context, index) =>
+                index == _tickers.tickers.length
+                    ? _buildAddTicker(context)
+                    : _buildTickerCell(context, index),
       ),
+    );
+  }
+
+  Widget _buildAddTicker(BuildContext context) {
+    return SizedBox(
+      height: 75,
+      child: Center(
+        child: TextButton(
+          child: Text('Add Ticker'),
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (context) {
+                return TickerConfig(
+                  ticker: DashTicker(title: null, ticker1: '', ticker2: ''),
+                  onSave: (ticker) {
+                    setState(() {
+                      _tickers = DashTickers(
+                        tickers: _tickers.tickers + [ticker],
+                      );
+                    });
+                    // save the new ticker to settings
+                    Settings.saveDashTickers(_tickers);
+                  },
+                  add: true,
+                );
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  /// A grab handle that drags the card it belongs to.
+  Widget _buildDragHandle(BuildContext context, int index, DashTicker ticker) {
+    return MouseRegion(
+      cursor:
+          _draggingIndex == index
+              ? SystemMouseCursors.grabbing
+              : SystemMouseCursors.grab,
+      child: Tooltip(
+        message: 'Drag to reorder',
+        // A tap trigger keeps the long press free for the drag gesture.
+        triggerMode: TooltipTriggerMode.tap,
+        child: Draggable<int>(
+          data: index,
+          feedback: _DragFeedback(ticker: ticker),
+          dragAnchorStrategy: pointerDragAnchorStrategy,
+          onDragStarted: () => _setDraggingIndex(index),
+          onDragEnd: (_) => _setDraggingIndex(null),
+          child: Icon(
+            Icons.drag_indicator,
+            size: 14,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// A ticker card that can be dragged onto another card to take its place.
+  Widget _buildTickerCell(BuildContext context, int index) {
+    final ticker = _tickers.tickers[index];
+    return DragTarget<int>(
+      key: ObjectKey(ticker),
+      onWillAcceptWithDetails: (details) => details.data != index,
+      onAcceptWithDetails: (details) => _moveTicker(details.data, index),
+      builder: (context, candidateData, rejectedData) {
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              width: 2,
+              color:
+                  candidateData.isEmpty
+                      ? Colors.transparent
+                      : Theme.of(context).colorScheme.primary,
+            ),
+          ),
+          child: Opacity(
+            opacity: _draggingIndex == index ? 0.35 : 1,
+            child: _buildDashCard(context, index),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDashCard(BuildContext context, int index) {
+    final ticker = _tickers.tickers[index];
+    return DashCard(
+      key: ObjectKey(ticker),
+      refreshToken: _refreshToken,
+      ticker: ticker,
+      dragHandle: _buildDragHandle(context, index, ticker),
+      onTitleTap: () async {
+        _log.info('Tapped on ${ticker.ticker1}');
+        log.info('Navigating to Ticker');
+        context.goNamed(
+          AppPage.ticker.name,
+          queryParameters: {
+            'title': ticker.title ?? '',
+            'ticker1': ticker.ticker1,
+            'ticker2': ticker.ticker2 ?? '',
+          },
+        );
+      },
+      onRemove: () {
+        // are you sure?
+        showDialog<bool?>(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text('Remove Ticker'),
+              content: const Text(
+                'Are you sure you want to remove this ticker?',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(false);
+                  },
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(true);
+                  },
+                  child: const Text('Remove'),
+                ),
+              ],
+            );
+          },
+        ).then((result) {
+          if (result == true) {
+            _log.info('Removing ${ticker.ticker1}');
+            setState(() {
+              _tickers = DashTickers(
+                tickers: _tickers.tickers.where((t) => t != ticker).toList(),
+              );
+            });
+            // save the new list to settings
+            Settings.saveDashTickers(_tickers);
+          }
+        });
+      },
+      onConfig: () {
+        _log.info('Configuring ${ticker.ticker1}');
+        showDialog(
+          context: context,
+          builder: (context) {
+            return TickerConfig(
+              ticker: ticker,
+              onSave: (updated) {
+                setState(() {
+                  _tickers = DashTickers(
+                    tickers:
+                        _tickers.tickers
+                            .map((t) => t == ticker ? updated : t)
+                            .toList(),
+                  );
+                });
+                // save the new ticker to settings
+                Settings.saveDashTickers(_tickers);
+              },
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -935,4 +1048,50 @@ class _ShinePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_ShinePainter oldDelegate) => oldDelegate.t != t;
+}
+
+/// The ghost that follows the pointer while a ticker card is being dragged.
+class _DragFeedback extends StatelessWidget {
+  const _DragFeedback({required this.ticker});
+
+  final DashTicker ticker;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final title = ticker.title ?? ticker.ticker1;
+    final ticker2 = ticker.ticker2;
+    final symbols =
+        ticker2 == null || ticker2.isEmpty
+            ? ticker.ticker1
+            : '${ticker.ticker1} vs $ticker2';
+    return Material(
+      elevation: 8,
+      borderRadius: BorderRadius.circular(12),
+      color: colors.surfaceContainerHighest,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.drag_indicator,
+              size: 16,
+              color: colors.onSurfaceVariant,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              symbols,
+              style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

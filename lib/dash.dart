@@ -175,7 +175,7 @@ class _TickerConfigState extends State<TickerConfig> {
 }
 
 enum DashState {
-  /// First load, nothing to show yet.
+  /// First load, showing the configured ticker while data is fetched.
   loading,
 
   /// First load failed, nothing to show.
@@ -570,6 +570,67 @@ class _DashCardState extends State<DashCard> with TickerProviderStateMixin {
     );
   }
 
+  Widget _buildLoadingCard() {
+    final ticker = widget.ticker;
+    final symbols =
+        ticker.ticker2 == null || ticker.ticker2!.isEmpty
+            ? ticker.ticker1
+            : '${ticker.ticker1} / ${ticker.ticker2}';
+    final title = ticker.title;
+    final hasTitle = title != null && title.isNotEmpty;
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 14,
+              height: 35,
+              child: Center(child: widget.dragHandle),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    hasTitle ? title : symbols,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  if (hasTitle && title != symbols)
+                    Text(
+                      symbols,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(width: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildTickerCard(BuildContext context) {
     assert(_customTickerResult != null, 'Custom ticker result is null');
     final result = _customTickerResult!;
@@ -732,7 +793,7 @@ class _DashCardState extends State<DashCard> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     switch (_state) {
       case DashState.loading:
-        return _buildPlaceholderCard(const CircularProgressIndicator());
+        return _buildLoadingCard();
       case DashState.error:
         return _buildPlaceholderCard(const Text('Error loading ticker data'));
       case DashState.reloading:

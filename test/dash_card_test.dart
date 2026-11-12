@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -66,6 +67,58 @@ Future<void> _pumpCard(
 }
 
 void main() {
+  testWidgets(
+    'shows configured ticker metadata while the first load is pending',
+    (tester) async {
+      final response = Completer<http.Response>();
+      await _pumpCard(
+        tester,
+        ticker: const DashTicker(
+          title: 'Tesla vs Gold',
+          ticker1: 'TSLA',
+          ticker2: 'GC=F',
+        ),
+        client: MockClient((_) => response.future),
+      );
+
+      expect(find.text('Tesla vs Gold'), findsOneWidget);
+      expect(find.text('TSLA / GC=F'), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byIcon(Icons.drag_indicator), findsOneWidget);
+      expect(find.byIcon(Icons.settings), findsNothing);
+
+      response.complete(http.Response(jsonEncode(tickerResponse()), 200));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.text('Tesla vs Gold'), findsOneWidget);
+      expect(find.text('Tesla Inc'), findsOneWidget);
+      expect(find.byIcon(Icons.settings), findsOneWidget);
+    },
+  );
+
+  testWidgets('uses the symbol when a loading ticker has no title', (
+    tester,
+  ) async {
+    final response = Completer<http.Response>();
+    await _pumpCard(
+      tester,
+      ticker: const DashTicker(title: null, ticker1: 'TSLA', ticker2: ''),
+      client: MockClient((_) => response.future),
+    );
+
+    expect(find.text('TSLA'), findsOneWidget);
+    expect(find.text('TSLA / '), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+    response.complete(http.Response('unavailable', 500));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Error loading ticker data'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
+
   testWidgets('shows the 24h change and toggles to the 7d window', (
     tester,
   ) async {

@@ -8,6 +8,7 @@ import 'package:http/testing.dart';
 import 'package:macrodash/dash.dart';
 import 'package:macrodash/theme.dart';
 import 'package:macrodash_models/models.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/dash_harness.dart';
 
@@ -191,6 +192,86 @@ void main() {
     );
 
     expect(find.text('Error loading ticker data'), findsOneWidget);
+  });
+
+  testWidgets('the price tooltip says where the data is from and how old', (
+    tester,
+  ) async {
+    final now = DateTime.now();
+    await _pumpCard(
+      tester,
+      prices: [(now.subtract(const Duration(hours: 1)), 100), (now, 110)],
+    );
+
+    final message =
+        tester
+            .widget<Tooltip>(find.byKey(const ValueKey('freshness-tooltip')))
+            .message!;
+    expect(message, contains('Source: yahoo'));
+    expect(message, contains('Last price: '));
+    expect(message, contains('Updated just now'));
+    expect(message, isNot(contains('Reload failed')));
+    expect(find.byIcon(Icons.warning_amber_rounded), findsNothing);
+  });
+
+  testWidgets('tapping the price shows the freshness without hover', (
+    tester,
+  ) async {
+    final now = DateTime.now();
+    await _pumpCard(
+      tester,
+      prices: [(now.subtract(const Duration(hours: 1)), 100), (now, 110)],
+    );
+
+    expect(find.textContaining('Source: yahoo'), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('freshness-tooltip')));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.textContaining('Source: yahoo'), findsOneWidget);
+  });
+
+  testWidgets('the large chart repeats the source and freshness', (
+    tester,
+  ) async {
+    final now = DateTime.now();
+    await _pumpCard(
+      tester,
+      prices: [(now.subtract(const Duration(hours: 1)), 100), (now, 110)],
+    );
+
+    tester.view.physicalSize = const Size(800, 600);
+    await tester.tap(find.byTooltip('Show larger chart'));
+    await tester.pumpAndSettle();
+
+    final text =
+        tester
+            .widget<Text>(find.byKey(const ValueKey('sparkline-freshness')))
+            .data!;
+    expect(text, contains('Source: yahoo'));
+    expect(text, contains('Updated just now'));
+  });
+
+  testWidgets('the error card says why and retries on request', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    var failing = true;
+    final client = MockClient(
+      (_) async =>
+          failing
+              ? http.Response('nope', 500)
+              : http.Response(jsonEncode(tickerResponse()), 200),
+    );
+
+    await runDashPanelTest(tester, client: client, () async {
+      expect(find.text('Error loading ticker data'), findsNWidgets(4));
+      expect(find.text('Server returned 500'), findsNWidgets(4));
+
+      failing = false;
+      await tester.tap(find.text('Retry').first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Error loading ticker data'), findsNWidgets(3));
+      expect(find.text('Retry'), findsNWidgets(3));
+    });
   });
 
   testWidgets('only shows a subtitle that adds something', (tester) async {

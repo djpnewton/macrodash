@@ -35,6 +35,17 @@ class Settings {
     return await SharedPreferences.getInstance();
   }
 
+  static const String _tipsDismissedKey = 'dashTipsDismissed';
+
+  /// Whether the user has dismissed the first-run dashboard tips.
+  static bool loadTipsDismissed(SharedPreferences prefs) =>
+      prefs.getBool(_tipsDismissedKey) ?? false;
+
+  static Future<void> saveTipsDismissed(bool dismissed) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_tipsDismissedKey, dismissed);
+  }
+
   /// Saves the selected chart library to shared preferences.
   static Future<void> saveChartLibrary(ChartLibrary chartLibrary) async {
     final prefs = await SharedPreferences.getInstance();

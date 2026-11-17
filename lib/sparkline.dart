@@ -257,6 +257,7 @@ Future<void> showLargeSparkline(
   List<int>? timestamps,
   String changeLabel = '24h',
   String note = 'Last 7 days',
+  String? freshness,
 }) {
   if (values.length < 2) {
     return Future<void>.value();
@@ -412,6 +413,18 @@ Future<void> showLargeSparkline(
                       ),
                     ),
                     const SizedBox(height: 8),
+                    if (freshness != null)
+                      Text(
+                        freshness,
+                        key: const ValueKey('sparkline-freshness'),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color:
+                              Theme.of(
+                                dialogContext,
+                              ).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
                     Align(
                       alignment: Alignment.centerRight,
                       child: Text(

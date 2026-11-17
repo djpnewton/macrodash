@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:macrodash/dash.dart';
+import 'package:macrodash/settings.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/dash_harness.dart';
@@ -35,6 +36,28 @@ double _staleOpacity(WidgetTester tester, int index) {
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
+
+  testWidgets('first-run tips show once and stay dismissed', (tester) async {
+    await runDashPanelTest(tester, () async {
+      expect(find.byKey(const ValueKey('dash-tips')), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Dismiss tips'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('dash-tips')), findsNothing);
+      expect(Settings.loadTipsDismissed(await Settings.getPrefs()), isTrue);
+    });
+  });
+
+  testWidgets('tips stay hidden once dismissed in an earlier session', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({'dashTipsDismissed': true});
+    await runDashPanelTest(tester, () async {
+      expect(find.byKey(const ValueKey('dash-tips')), findsNothing);
+      expect(cardOrder(tester), hasLength(4));
+    });
+  });
 
   testWidgets('removing a ticker asks first and persists the result', (
     tester,
@@ -203,6 +226,14 @@ void main() {
 
       expect(_staleOpacity(tester, 0), 1);
       expect(find.text('Error loading ticker data'), findsNothing);
+      expect(find.byIcon(Icons.warning_amber_rounded), findsNWidgets(4));
+      final message =
+          tester
+              .widget<Tooltip>(
+                find.byKey(const ValueKey('freshness-tooltip')).first,
+              )
+              .message!;
+      expect(message, contains('Reload failed: Server returned 500'));
       expect(cardOrder(tester), hasLength(4));
     });
   });

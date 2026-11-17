@@ -15,6 +15,7 @@ import 'result.dart';
 import 'helper.dart';
 import 'amount_series_page.dart';
 import 'config.dart';
+import 'freshness.dart';
 
 final _log = Logger('DashPanel');
 
@@ -234,6 +235,9 @@ class _DashCardState extends State<DashCard> with TickerProviderStateMixin {
   DateTime _loadedAt = DateTime.now();
   Timer? _staleTimer;
 
+  /// Why the last load failed, or null when it succeeded.
+  String? _loadError;
+
   @override
   void initState() {
     super.initState();
@@ -248,11 +252,15 @@ class _DashCardState extends State<DashCard> with TickerProviderStateMixin {
   /// auto-refresh is off); a failed reload marks it stale immediately.
   Future<void> _checkStale() async {
     final minutes = Settings.loadAutoRefreshMinutes(await Settings.getPrefs());
-    if (!mounted || _state != DashState.loaded) return;
+    if (!mounted || !_state.hasData) return;
     final limit = Duration(minutes: minutes > 0 ? minutes : 15);
-    if (DateTime.now().difference(_loadedAt) >= limit) {
-      setState(() => _state = DashState.stale);
-    }
+    final expired =
+        _state == DashState.loaded &&
+        DateTime.now().difference(_loadedAt) >= limit;
+    // Rebuild either way so the "updated ... ago" text keeps up.
+    setState(() {
+      if (expired) _state = DashState.stale;
+    });
   }
 
   // Creeps towards 90% while waiting, then fills up when the request is done.
@@ -312,6 +320,7 @@ class _DashCardState extends State<DashCard> with TickerProviderStateMixin {
         setState(() {
           _customTickerResult = (result as Ok<CustomTickerResult>).value;
           _loadedAt = DateTime.now();
+          _loadError = null;
           if (!hasData) _state = DashState.loaded;
         });
         if (hasData) {
@@ -327,6 +336,9 @@ class _DashCardState extends State<DashCard> with TickerProviderStateMixin {
       case Error():
         _progress.stop();
         setState(() {
+          _loadError = describeLoadError(
+            (result as Error<CustomTickerResult>).error,
+          );
           // Keep showing the old data if a reload fails.
           _state = hasData ? DashState.stale : DashState.error;
         });
@@ -438,6 +450,18 @@ class _DashCardState extends State<DashCard> with TickerProviderStateMixin {
     );
   }
 
+  /// Source, newest price time and fetch age of the data on screen.
+  String _freshnessText() {
+    final result = _customTickerResult!;
+    return freshnessSummary(
+      sources: result.sources,
+      lastPoint: result.priceData.last.date,
+      fetchedAt: _loadedAt,
+      now: DateTime.now(),
+      error: _loadError,
+    );
+  }
+
   List<Widget> _buildPriceWidgets(bool useColumn) {
     final changePct = _calculateChange(_customTickerResult!.priceData);
     final isUp = changePct >= 0;
@@ -448,7 +472,7 @@ class _DashCardState extends State<DashCard> with TickerProviderStateMixin {
     final boxHeight = useColumn ? 25.0 : 35.0;
     final fontSize = useColumn ? 14.0 : 16.0;
 
-    final price = SizedBox(
+    final priceBox = SizedBox(
       width: boxWidth,
       height: boxHeight,
       child:
@@ -473,6 +497,14 @@ class _DashCardState extends State<DashCard> with TickerProviderStateMixin {
                 _customTickerResult!.currency,
                 8,
               ),
+    );
+    final price = Tooltip(
+      key: const ValueKey('freshness-tooltip'),
+      message: _freshnessText(),
+      // Tap works on touch screens, where there is no hover.
+      triggerMode: TooltipTriggerMode.tap,
+      showDuration: const Duration(seconds: 6),
+      child: priceBox,
     );
     final changeBox = SizedBox(
       width: boxWidth,
@@ -545,6 +577,7 @@ class _DashCardState extends State<DashCard> with TickerProviderStateMixin {
       changePercent24h: _calculateChange(result.priceData),
       changeLabel: _windowLabel,
       note: _show7d ? 'Last 7 days' : 'Last 24 hours',
+      freshness: _freshnessText().replaceAll('\n', ' · '),
       values: sparklineData.sparkline,
       timestamps: sparklineData.sparklineTimestamps,
     );
@@ -564,6 +597,43 @@ class _DashCardState extends State<DashCard> with TickerProviderStateMixin {
             child: Center(
               child: SizedBox(width: 14, height: 35, child: widget.dragHandle),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorContent() {
+    final colors = Theme.of(context).colorScheme;
+    return Padding(
+      // Keeps the message clear of the drag handle.
+      padding: const EdgeInsets.only(left: 32, right: 8),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Error loading ticker data'),
+                if (_loadError != null)
+                  Text(
+                    _loadError!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          TextButton.icon(
+            onPressed: _loadTickerData,
+            icon: const Icon(Icons.refresh, size: 16),
+            label: const Text('Retry'),
           ),
         ],
       ),
@@ -746,6 +816,25 @@ class _DashCardState extends State<DashCard> with TickerProviderStateMixin {
               ],
             ),
           ),
+          if (_loadError != null)
+            Positioned(
+              left: 0,
+              top: 0,
+              child: Tooltip(
+                message: 'Showing older data. Reload failed: $_loadError',
+                triggerMode: TooltipTriggerMode.tap,
+                showDuration: const Duration(seconds: 6),
+                child: Padding(
+                  // A larger tap target around the small icon.
+                  padding: const EdgeInsets.all(4),
+                  child: Icon(
+                    Icons.warning_amber_rounded,
+                    size: 12,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                ),
+              ),
+            ),
           Positioned(
             left: 0,
             right: 0,
@@ -795,7 +884,7 @@ class _DashCardState extends State<DashCard> with TickerProviderStateMixin {
       case DashState.loading:
         return _buildLoadingCard();
       case DashState.error:
-        return _buildPlaceholderCard(const Text('Error loading ticker data'));
+        return _buildPlaceholderCard(_buildErrorContent());
       case DashState.reloading:
       case DashState.stale:
       case DashState.loaded:
@@ -817,12 +906,26 @@ class _DashPanelState extends State<DashPanel> with WidgetsBindingObserver {
   int _refreshToken = 0;
   DateTime _lastRefresh = DateTime.now();
   DashTickers _tickers = DashTickers(tickers: []);
+  // Hidden until the stored preference is known, to avoid a flash.
+  bool _showTips = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadTickers();
+    _loadTips();
+  }
+
+  Future<void> _loadTips() async {
+    final dismissed = Settings.loadTipsDismissed(await Settings.getPrefs());
+    if (!mounted) return;
+    setState(() => _showTips = !dismissed);
+  }
+
+  void _dismissTips() {
+    setState(() => _showTips = false);
+    Settings.saveTipsDismissed(true);
   }
 
   @override
@@ -888,6 +991,15 @@ class _DashPanelState extends State<DashPanel> with WidgetsBindingObserver {
     const cardWidth = 400.0;
     final columns = (width.width / cardWidth).floor();
 
+    return Column(
+      children: [
+        if (_showTips) _DashTips(onDismiss: _dismissTips),
+        Expanded(child: _buildGrid(columns)),
+      ],
+    );
+  }
+
+  Widget _buildGrid(int columns) {
     return RefreshIndicator(
       key: widget.refreshKey,
       onRefresh: _refreshTickers,
@@ -1085,6 +1197,49 @@ class _DashPanelState extends State<DashPanel> with WidgetsBindingObserver {
           },
         );
       },
+    );
+  }
+}
+
+/// First-run hints about the dashboard gestures, dismissed for good once closed.
+class _DashTips extends StatelessWidget {
+  const _DashTips({required this.onDismiss});
+
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Card(
+      key: const ValueKey('dash-tips'),
+      color: colors.secondaryContainer,
+      margin: const EdgeInsets.fromLTRB(5, 5, 5, 0),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.lightbulb_outline, color: colors.onSecondaryContainer),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Tap the percentage change on a card to switch between 24h and '
+                '7d, tap the price to see its source and age, tap the name to '
+                'open a full chart, and drag the handle to reorder. Add a '
+                'second ticker to compare two assets. Your watchlist is saved '
+                'on this device.',
+                style: TextStyle(color: colors.onSecondaryContainer),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close, size: 18),
+              tooltip: 'Dismiss tips',
+              color: colors.onSecondaryContainer,
+              onPressed: onDismiss,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

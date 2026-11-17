@@ -1,5 +1,5 @@
 name: macrodash_server
-description: A new Dart Frog application
+description: API server for MacroDash market and macro data.
 version: 1.0.0+1
 publish_to: none
 

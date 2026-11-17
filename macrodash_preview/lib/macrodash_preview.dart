@@ -3,6 +3,7 @@
 library;
 
 export 'src/palette.dart';
+export 'src/comparison.dart';
 export 'src/render.dart';
 export 'src/share_urls.dart';
 export 'src/ticker_preview.dart';

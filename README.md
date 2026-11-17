@@ -11,12 +11,28 @@ Live app: <https://macrodash.me>
 - **Watchlist dashboard**: add any ticker (stocks, crypto, futures, FX), see
   the price and a sparkline, tap the change to switch between 24h and 7d, and
   drag cards to reorder them.
-- **Comparison tickers**: pair two tickers to chart their ratio (for example
-  `BTC-USD / GC=F`).
+- **Comparison tickers**: pair two tickers on a card to compare their indexed
+  price changes (for example `BTC-USD` vs `GC=F`). Existing two-ticker cards
+  now show comparisons rather than ratios. Tap the card's chart or name to
+  overlay additional tickers, select 7D, 1M, 1Y or YTD, and see dividend events.
+  For a single-ticker card, tap its chart, then **Compare**.
+  Overlays are indexed to 100 at each series' first available point in the
+  common time window; they show price changes, not total returns. YTD starts
+  with the first available observation of the current calendar year. Overlay
+  selections are temporary and do not change the saved watchlist.
+  Like the sparklines, comparison charts space observations evenly rather than
+  by elapsed time. All series share the same timeline; periods with no
+  observations in any series are compressed, while individual missing data is
+  connected to the next observation.
+  Use the share button in the comparison view to share its tickers and range
+  with an indexed-chart link preview. Up to 12 tickers can be compared.
+  Existing shared ratio-chart links continue to show ratios.
 - **Macro charts**: M2 money supply, government debt, bond rates by term,
   market indices and futures, with zoom and shareable links.
 - **Market caps**: ranked tables for several asset categories.
 - **Link previews**: shared ticker and chart links render an image preview.
+  Expanded dashboard sparklines can be shared with a preview of the selected
+  24-hour or 7-day window.
 - Light, dark and system themes, and auto-refresh when the app is reopened.
 
 Your watchlist and settings are stored locally on the device (there are no

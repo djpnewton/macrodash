@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:macrodash/dash.dart';
+import 'package:macrodash/option_buttons.dart';
 import 'package:macrodash/theme.dart';
 import 'package:macrodash_models/models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -83,7 +84,7 @@ void main() {
       );
 
       expect(find.text('Tesla vs Gold'), findsOneWidget);
-      expect(find.text('TSLA / GC=F'), findsOneWidget);
+      expect(find.text('TSLA vs GC=F'), findsOneWidget);
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
       expect(find.byIcon(Icons.drag_indicator), findsOneWidget);
       expect(find.byIcon(Icons.settings), findsNothing);
@@ -94,7 +95,7 @@ void main() {
 
       expect(find.byType(CircularProgressIndicator), findsNothing);
       expect(find.text('Tesla vs Gold'), findsOneWidget);
-      expect(find.text('Tesla Inc'), findsOneWidget);
+      expect(find.text('TSLA vs GC=F'), findsOneWidget);
       expect(find.byIcon(Icons.settings), findsOneWidget);
     },
   );
@@ -118,6 +119,117 @@ void main() {
     await tester.pump();
     expect(find.text('Error loading ticker data'), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
+
+  testWidgets(
+    'saved pairs display separate indexed changes and open comparison',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({
+        'dash_tickers': jsonEncode({
+          'tickers': [
+            {'title': 'Saved pair', 'ticker1': 'AAA', 'ticker2': 'BBB'},
+          ],
+        }),
+      });
+      final requests = <Uri>[];
+      final now = DateTime.now();
+      final client = MockClient((request) async {
+        requests.add(request.url);
+        final first = request.url.queryParameters['ticker1'] == 'AAA';
+        return http.Response(
+          jsonEncode(
+            tickerResponse(
+              prices: [
+                (now.subtract(const Duration(days: 3)), first ? 50 : 100),
+                (now.subtract(const Duration(hours: 12)), first ? 100 : 200),
+                (now, first ? 120 : 180),
+              ],
+            ),
+          ),
+          200,
+        );
+      });
+      await runDashPanelTest(tester, client: client, () async {
+        expect(requests.map((r) => r.queryParameters['ticker1']), [
+          'AAA',
+          'BBB',
+        ]);
+        expect(
+          requests.every((r) => r.queryParameters['ticker2']!.isEmpty),
+          isTrue,
+        );
+        expect(find.text('AAA +20.00%'), findsOneWidget);
+        expect(find.text('BBB -10.00%'), findsOneWidget);
+        await tester.tap(find.byTooltip('Toggle 24h / 7d'));
+        await tester.pump();
+        expect(find.text('AAA +140.00%'), findsOneWidget);
+        expect(find.text('BBB +80.00%'), findsOneWidget);
+        await tester.tap(find.byTooltip('Show larger chart'));
+        await tester.pumpAndSettle();
+        expect(find.text('Compare prices'), findsOneWidget);
+        expect(find.text('AAA'), findsOneWidget);
+        expect(find.text('BBB'), findsOneWidget);
+        expect(requests, hasLength(4));
+        await tester.tap(find.byTooltip('Back to chart'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Saved pair'));
+        await tester.pumpAndSettle();
+        expect(find.text('Compare prices'), findsOneWidget);
+      });
+    },
+  );
+
+  testWidgets('comparison card fits at phone width', (tester) async {
+    final now = DateTime.now();
+    await _pumpCard(
+      tester,
+      ticker: const DashTicker(title: null, ticker1: 'AAA', ticker2: 'BBB'),
+      prices: [(now.subtract(const Duration(hours: 2)), 100), (now, 110)],
+    );
+    tester.view.physicalSize = const Size(360, 600);
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(find.text('AAA +10.00%'), findsOneWidget);
+    expect(find.text('BBB +10.00%'), findsOneWidget);
+  });
+
+  testWidgets('failed component reload keeps both previous comparison values', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({
+      'dash_tickers': jsonEncode({
+        'tickers': [
+          {'title': 'Saved pair', 'ticker1': 'AAA', 'ticker2': 'BBB'},
+        ],
+      }),
+    });
+    final now = DateTime.now();
+    var failing = false;
+    final client = MockClient((request) async {
+      final first = request.url.queryParameters['ticker1'] == 'AAA';
+      if (failing && !first) return http.Response('error', 500);
+      return http.Response(
+        jsonEncode(
+          tickerResponse(
+            prices: [
+              (now.subtract(const Duration(hours: 2)), first ? 100 : 200),
+              (now, first ? (failing ? 150 : 120) : 180),
+            ],
+          ),
+        ),
+        200,
+      );
+    });
+    await runDashPanelTest(tester, client: client, () async {
+      expect(find.text('AAA +20.00%'), findsOneWidget);
+      expect(find.text('BBB -10.00%'), findsOneWidget);
+      failing = true;
+      await tester.fling(find.byType(GridView), const Offset(0, 400), 1000);
+      await tester.pumpAndSettle();
+      expect(find.text('AAA +20.00%'), findsOneWidget);
+      expect(find.text('BBB -10.00%'), findsOneWidget);
+      expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
+    });
   });
 
   testWidgets('shows the 24h change and toggles to the 7d window', (
@@ -249,6 +361,90 @@ void main() {
             .data!;
     expect(text, contains('Source: yahoo'));
     expect(text, contains('Updated just now'));
+    expect(find.text('Compare'), findsOneWidget);
+  });
+
+  testWidgets('large dashboard chart shares the selected sparkline window', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({
+      'dash_tickers': jsonEncode({
+        'tickers': [
+          {'title': 'Tesla', 'ticker1': 'TSLA', 'ticker2': null},
+        ],
+      }),
+    });
+    final now = DateTime.now();
+    await runDashPanelTest(
+      tester,
+      client: tickerClient(
+        body: jsonEncode(
+          tickerResponse(
+            prices: [
+              (now.subtract(const Duration(days: 3)), 90),
+              (now.subtract(const Duration(hours: 12)), 100),
+              (now, 110),
+            ],
+          ),
+        ),
+      ),
+      () async {
+        await tester.tap(find.byTooltip('Show larger chart'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byTooltip('Share chart'));
+        await tester.pumpAndSettle();
+        var image = tester.widget<SharePreviewImage>(
+          find.byType(SharePreviewImage),
+        );
+        expect(Uri.parse(image.url).queryParameters['windowDays'], '1');
+        expect(Uri.parse(image.url).queryParameters['ticker1'], 'TSLA');
+        expect(find.textContaining('zoom=oneDay'), findsOneWidget);
+        await tester.binding.handlePopRoute();
+        await tester.pumpAndSettle();
+        await tester.tap(find.byTooltip('Close'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byTooltip('Toggle 24h / 7d'));
+        await tester.pump();
+        await tester.tap(find.byTooltip('Show larger chart'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byTooltip('Share chart'));
+        await tester.pumpAndSettle();
+        image = tester.widget<SharePreviewImage>(
+          find.byType(SharePreviewImage),
+        );
+        expect(Uri.parse(image.url).queryParameters['windowDays'], '7');
+        expect(find.textContaining('zoom=sevenDays'), findsOneWidget);
+      },
+    );
+  });
+
+  testWidgets('opens comparison from the large chart and returns to it', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final requests = <Uri>[];
+    await runDashPanelTest(
+      tester,
+      size: const Size(800, 900),
+      client: tickerClient(requests: requests),
+      () async {
+        await tester.tap(find.byTooltip('Show larger chart').first);
+        await tester.pumpAndSettle();
+        expect(find.text('Not enough data for this chart.'), findsOneWidget);
+        await tester.tap(find.text('Compare'));
+        await tester.pumpAndSettle();
+        expect(find.text('Compare prices'), findsOneWidget);
+        expect(find.textContaining('Indexed to 100'), findsOneWidget);
+        expect(requests.last.queryParameters['range'], 'sevenDays');
+        await tester.tap(find.byTooltip('Back to chart'));
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('sparkline-freshness')),
+          findsOneWidget,
+        );
+        expect(find.text('Compare'), findsOneWidget);
+      },
+    );
   });
 
   testWidgets('the error card says why and retries on request', (tester) async {

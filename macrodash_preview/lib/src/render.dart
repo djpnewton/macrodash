@@ -6,6 +6,7 @@ import 'package:pcanvas/pcanvas.dart';
 
 import 'palette.dart';
 import 'ticker_preview.dart';
+import 'comparison.dart';
 
 const int defaultPreviewWidth = 1200;
 const int defaultPreviewHeight = 630;
@@ -24,6 +25,152 @@ Future<Uint8List> renderPreviewPng(
   await canvas.waitLoading();
   canvas.callPainter();
   return canvas.toPNG();
+}
+
+/// Renders the normalized comparison on shared observation and value axes.
+Future<Uint8List> renderComparisonPreviewPng(
+  List<ComparisonSeries> series, {
+  required String rangeLabel,
+  int width = defaultPreviewWidth,
+  int height = defaultPreviewHeight,
+}) async {
+  final canvas = PCanvas(
+    width,
+    height,
+    _ComparisonPreviewPainter(series, rangeLabel),
+  );
+  await canvas.waitLoading();
+  canvas.callPainter();
+  return canvas.toPNG();
+}
+
+class _ComparisonPreviewPainter extends _TickerPreviewPainter {
+  _ComparisonPreviewPainter(this.series, this.rangeLabel)
+    : super(const PreviewData(title: '', subtitle: '', value: ''));
+
+  final List<ComparisonSeries> series;
+  final String rangeLabel;
+
+  @override
+  bool paint(PCanvas canvas) {
+    final width = canvas.width.toDouble();
+    final height = canvas.height.toDouble();
+    canvas.fillTopDownGradient(
+      0,
+      0,
+      width,
+      height,
+      _color(MacroDashPalette.navy700),
+      _color(MacroDashPalette.navy800),
+    );
+    _paintMark(canvas, 80, 74, 96);
+    canvas.drawText(
+      'MacroDash',
+      205,
+      78,
+      PFont('Arial', 24, bold: true),
+      PStyle(color: _color(MacroDashPalette.subtle)),
+    );
+    canvas.drawText(
+      'Price comparison',
+      205,
+      112,
+      PFont('Arial', 48, bold: true),
+      PStyle(color: _color(MacroDashPalette.ink)),
+    );
+    canvas.drawText(
+      '$rangeLabel  -  Indexed to 100',
+      205,
+      174,
+      PFont('Arial', 24),
+      PStyle(color: _color(MacroDashPalette.muted)),
+    );
+    final font = PFont('Arial', 14);
+    for (var i = 0; i < series.length; i++) {
+      final item = series[i];
+      final x = 205.0 + (i % 3) * 300;
+      final y = 215.0 + (i ~/ 3) * 23;
+      final change = item.prices.last.amount - 100;
+      final changeLabel =
+          '${change >= 0 ? '+' : ''}${change.toStringAsFixed(2)}%';
+      var symbol = item.label;
+      while (symbol.length > 1 &&
+          canvas.measureText('$symbol $changeLabel', font).actualWidth > 270) {
+        symbol = symbol.substring(0, symbol.length - 1);
+      }
+      if (symbol != item.label) symbol = '$symbol...';
+      final label = '$symbol $changeLabel';
+      canvas.fillCircle(
+        x,
+        y + 7,
+        5,
+        PStyle(
+          color: _color(
+            comparisonColorValues[i % comparisonColorValues.length],
+          ),
+        ),
+      );
+      canvas.drawText(
+        label,
+        x + 12,
+        y,
+        font,
+        PStyle(color: _color(MacroDashPalette.ink)),
+      );
+    }
+
+    final all = series.expand((item) => item.prices).toList();
+    if (all.isEmpty) return false;
+    final timeline = ComparisonTimeline(series);
+    if (timeline.length < 2) return false;
+    var low = all.map((p) => p.amount).reduce(math.min);
+    var high = all.map((p) => p.amount).reduce(math.max);
+    if (low == high) {
+      low -= 1;
+      high += 1;
+    }
+    const left = 150.0, top = 330.0, bottom = 540.0;
+    final right = width - 80;
+    for (final y in [top, bottom]) {
+      canvas.strokePath([
+        Point(left, y),
+        Point(right, y),
+      ], PStyle(color: _color(MacroDashPalette.grid)));
+    }
+    for (var i = 0; i < series.length; i++) {
+      final points = [
+        for (final p in series[i].prices)
+          Point(
+            left +
+                timeline.position(p.date) /
+                    (timeline.length - 1) *
+                    (right - left),
+            bottom - (p.amount - low) / (high - low) * (bottom - top),
+          ),
+      ];
+      _strokeThick(
+        canvas,
+        points,
+        2,
+        _color(comparisonColorValues[i % comparisonColorValues.length]),
+      );
+    }
+    for (final (label, y) in [
+      (high.toStringAsFixed(1), top),
+      (low.toStringAsFixed(1), bottom),
+    ]) {
+      final textWidth = canvas.measureText(label, font).actualWidth;
+      canvas.drawText(
+        label,
+        left - textWidth - 12,
+        y - 10,
+        font,
+        PStyle(color: _color(MacroDashPalette.muted)),
+      );
+    }
+    _paintFooter(canvas, height);
+    return true;
+  }
 }
 
 PColor _color(int argb) =>

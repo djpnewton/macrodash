@@ -72,7 +72,11 @@ Future<Response> onRequest(RequestContext context, String ticker) async {
     _log.warning('No data for $ticker1, falling back to the site image');
     ogImage = '$appUrl/og-image.png';
   } else {
-    final data = PreviewData.fromTicker(result, title: title);
+    final data = PreviewData.fromTicker(
+      result,
+      title: title,
+      days: params['windowDays'] == '1' ? 1 : 7,
+    );
     pageTitle = '${data.title} (${data.value} ${data.unit})';
     description = '${data.subtitle}: ${data.value} ${data.unit}, '
         '${data.change} over ${data.windowLabel}. MacroDash.';

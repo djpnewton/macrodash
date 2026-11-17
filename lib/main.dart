@@ -16,6 +16,7 @@ import 'settings_page.dart';
 import 'about_page.dart';
 import 'dash.dart';
 import 'helper.dart';
+import 'comparison.dart';
 
 final log = Logger('mainlogger');
 SharedPreferences? _prefs;
@@ -78,6 +79,7 @@ final _router = GoRouter(
       path: '/',
       builder: (context, state) => const MyHomePage(title: 'MacroDash'),
       routes: <RouteBase>[
+        comparisonRoute(),
         GoRoute(
           name: AppPage.ticker.name,
           path: '/ticker',

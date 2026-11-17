@@ -258,8 +258,10 @@ Future<void> showLargeSparkline(
   String changeLabel = '24h',
   String note = 'Last 7 days',
   String? freshness,
+  Widget? shareButton,
+  Widget Function(VoidCallback onClose)? comparisonBuilder,
 }) {
-  if (values.length < 2) {
+  if (values.length < 2 && comparisonBuilder == null) {
     return Future<void>.value();
   }
   final colors = context.appColors;
@@ -267,7 +269,9 @@ Future<void> showLargeSparkline(
   // One grid line per day covered by the sparkline.
   final dayFractions = <double>[];
   final dayLabels = <String>[];
-  if (timestamps != null && timestamps.length == values.length) {
+  if (values.length >= 2 &&
+      timestamps != null &&
+      timestamps.length == values.length) {
     final firstIndexByDay = <int, int>{};
     for (var i = 0; i < timestamps.length; i++) {
       final date = DateTime.fromMillisecondsSinceEpoch(timestamps[i]);
@@ -315,134 +319,170 @@ Future<void> showLargeSparkline(
   final navigator = Navigator.of(context, rootNavigator: true);
   final releaseBackGuard = installBackGuard(() => navigator.maybePop());
 
+  var showingComparison = false;
   return showDialog<void>(
     context: context,
     builder:
-        (dialogContext) => Dialog.fullscreen(
-          child: Scaffold(
-            appBar: AppBar(
-              leading: IconButton(
-                icon: const Icon(Icons.close),
-                tooltip: 'Close',
-                onPressed: () => Navigator.of(dialogContext).pop(),
-              ),
-              title: Text(title),
-            ),
-            body: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (subtitle != null) ...[
-                      Text(
-                        subtitle,
-                        style: Theme.of(dialogContext).textTheme.titleMedium,
+        (dialogContext) => StatefulBuilder(
+          builder: (context, setDialogState) {
+            if (showingComparison) {
+              return Dialog.fullscreen(
+                child: comparisonBuilder!(
+                  () => setDialogState(() => showingComparison = false),
+                ),
+              );
+            }
+            return Dialog.fullscreen(
+              child: Scaffold(
+                appBar: AppBar(
+                  leading: IconButton(
+                    icon: const Icon(Icons.close),
+                    tooltip: 'Close',
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                  ),
+                  title: Text(title),
+                  actions: [
+                    if (shareButton != null) shareButton,
+                    if (comparisonBuilder != null)
+                      TextButton.icon(
+                        onPressed:
+                            () =>
+                                setDialogState(() => showingComparison = true),
+                        icon: const Icon(Icons.compare_arrows),
+                        label: const Text('Compare'),
                       ),
-                      const SizedBox(height: 4),
-                    ],
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        if (priceText != null)
-                          Text(
-                            priceText,
-                            style:
-                                Theme.of(dialogContext).textTheme.headlineSmall,
-                          ),
-                        if (secondaryText != null) ...[
-                          const SizedBox(width: 6),
-                          Text(
-                            secondaryText,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color:
-                                  Theme.of(
-                                    dialogContext,
-                                  ).colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                        if (changePercent24h != null) ...[
-                          const SizedBox(width: 12),
-                          Text(
-                            '$changePrefix${changePercent24h.toStringAsFixed(2)}%',
-                            style: TextStyle(fontSize: 16, color: changeColor),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            changeLabel,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color:
-                                  Theme.of(
-                                    dialogContext,
-                                  ).colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Expanded(
-                      child: SparkChart(
-                        painter: SparkChartPainter(
-                          values,
-                          timestamps: timestamps,
-                          colorUp: colors.gain,
-                          colorDown: colors.loss,
-                          strokeWidth: 2,
-                          fillOpacity: 0.2,
-                          dayFractions: dayFractions,
-                          dayLabels: dayLabels,
-                          topLabel: priceLabel(maxValue),
-                          bottomLabel: priceLabel(minValue),
-                          gridColor:
-                              Theme.of(
-                                dialogContext,
-                              ).colorScheme.outlineVariant,
-                          labelStyle: TextStyle(
-                            fontSize: 11,
-                            color:
-                                Theme.of(
-                                  dialogContext,
-                                ).colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    if (freshness != null)
-                      Text(
-                        freshness,
-                        key: const ValueKey('sparkline-freshness'),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color:
-                              Theme.of(
-                                dialogContext,
-                              ).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: Text(
-                        note,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color:
-                              Theme.of(
-                                dialogContext,
-                              ).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
                   ],
                 ),
+                body: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (subtitle != null) ...[
+                          Text(
+                            subtitle,
+                            style:
+                                Theme.of(dialogContext).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 4),
+                        ],
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            if (priceText != null)
+                              Text(
+                                priceText,
+                                style:
+                                    Theme.of(
+                                      dialogContext,
+                                    ).textTheme.headlineSmall,
+                              ),
+                            if (secondaryText != null) ...[
+                              const SizedBox(width: 6),
+                              Text(
+                                secondaryText,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color:
+                                      Theme.of(
+                                        dialogContext,
+                                      ).colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                            if (changePercent24h != null) ...[
+                              const SizedBox(width: 12),
+                              Text(
+                                '$changePrefix${changePercent24h.toStringAsFixed(2)}%',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: changeColor,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                changeLabel,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color:
+                                      Theme.of(
+                                        dialogContext,
+                                      ).colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Expanded(
+                          child:
+                              values.length < 2
+                                  ? const Center(
+                                    child: Text(
+                                      'Not enough data for this chart.',
+                                    ),
+                                  )
+                                  : SparkChart(
+                                    painter: SparkChartPainter(
+                                      values,
+                                      timestamps: timestamps,
+                                      colorUp: colors.gain,
+                                      colorDown: colors.loss,
+                                      strokeWidth: 2,
+                                      fillOpacity: 0.2,
+                                      dayFractions: dayFractions,
+                                      dayLabels: dayLabels,
+                                      topLabel: priceLabel(maxValue),
+                                      bottomLabel: priceLabel(minValue),
+                                      gridColor:
+                                          Theme.of(
+                                            dialogContext,
+                                          ).colorScheme.outlineVariant,
+                                      labelStyle: TextStyle(
+                                        fontSize: 11,
+                                        color:
+                                            Theme.of(
+                                              dialogContext,
+                                            ).colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ),
+                        ),
+                        const SizedBox(height: 8),
+                        if (freshness != null)
+                          Text(
+                            freshness,
+                            key: const ValueKey('sparkline-freshness'),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color:
+                                  Theme.of(
+                                    dialogContext,
+                                  ).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            note,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color:
+                                  Theme.of(
+                                    dialogContext,
+                                  ).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
   ).whenComplete(releaseBackGuard);
 }

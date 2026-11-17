@@ -359,6 +359,12 @@ class ShareButton extends StatelessWidget {
   /// Ticker and dashboard pages point at the preview host so social apps can
   /// unfurl a chart; everything else falls back to the plain app URL.
   String _buildShareUri(Map<String, String> params) {
+    if (uri.path == '/compare') {
+      return comparisonShareUrl(
+        previewUrl: resolvedLinkPreviewUrl,
+        params: params,
+      );
+    }
     final ticker1 = params.remove('ticker1');
     if (ticker1 != null && ticker1.isNotEmpty) {
       return tickerShareUrl(
@@ -384,6 +390,12 @@ class ShareButton extends StatelessWidget {
   /// The chart image recipients will see unfurled, or null when the page has no
   /// server-rendered preview.
   String? _buildPreviewImageUri(Map<String, String> params) {
+    if (uri.path == '/compare') {
+      return comparisonPreviewImageUrl(
+        previewUrl: resolvedLinkPreviewUrl,
+        params: params,
+      );
+    }
     final ticker1 = params.remove('ticker1');
     if (ticker1 != null && ticker1.isNotEmpty) {
       return tickerPreviewImageUrl(

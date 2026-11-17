@@ -44,6 +44,99 @@ MarketOverviewEntry _marketEntry({
 );
 
 void main() {
+  test(
+    'comparison timeline aligns observations and compresses empty periods',
+    () {
+      final start = DateTime.utc(2025, 1, 3, 15);
+      final nextMinute = start.add(const Duration(minutes: 1));
+      final monday = DateTime.utc(2025, 1, 6, 15);
+      final afterMonday = monday.add(const Duration(minutes: 1));
+      ComparisonSeries makeSeries(List<DateTime> dates) => ComparisonSeries(
+        label: 'A',
+        prices: [
+          for (final date in dates) AmountEntry(date: date, amount: 100),
+        ],
+        dividends: const [],
+        currency: 'USD',
+      );
+      final timeline = ComparisonTimeline([
+        makeSeries([start, nextMinute, monday, afterMonday]),
+        makeSeries([start.toLocal(), monday, afterMonday]),
+      ]);
+      expect(timeline.length, 4);
+      expect([start, nextMinute, monday, afterMonday].map(timeline.position), [
+        0,
+        1,
+        2,
+        3,
+      ]);
+      expect(timeline.position(start.toLocal()), 0);
+
+      final mixed = ComparisonTimeline([
+        makeSeries([start, monday]),
+        makeSeries([start, nextMinute, monday]),
+      ]);
+      expect(mixed.position(monday), 2);
+      expect(mixed.position(nextMinute), 1);
+    },
+  );
+
+  test('comparison links preserve symbols, range and local YTD offset', () {
+    final params = {
+      'tickers': '["BTC-USD","GC=F","^GSPC"]',
+      'baseCount': '2',
+      'range': 'yearToDate',
+      'yearOffset': '-240',
+    };
+    final link = Uri.parse(
+      comparisonShareUrl(previewUrl: 'https://ln.example/', params: params),
+    );
+    expect(link.path, '/compare');
+    final parsed = ComparisonLink.parse(link.queryParameters)!;
+    expect(parsed.tickers, ['BTC-USD', 'GC=F', '^GSPC']);
+    expect(parsed.yearOffsetMinutes, -240);
+    final app = Uri.parse(
+      comparisonAppUrl(
+        appUrl: 'https://app.example',
+        params: link.queryParameters,
+      ),
+    );
+    expect(Uri.parse(app.fragment).queryParameters, params);
+    expect(
+      Uri.parse(
+        comparisonPreviewImageUrl(
+          previewUrl: 'https://ln.example',
+          params: params,
+        ),
+      ).queryParameters,
+      params,
+    );
+    expect(
+      comparisonYearStart(DateTime.utc(2025, 1, 1, 2), -240),
+      DateTime.utc(2024, 1, 1, 4),
+    );
+  });
+
+  test(
+    'comparison links reject malformed, duplicate and excessive symbols',
+    () {
+      final params = {'baseCount': '1', 'range': 'oneYear'};
+      expect(ComparisonLink.parse({...params, 'tickers': '[]'}), isNull);
+      expect(ComparisonLink.parse({...params, 'tickers': '["A","a"]'}), isNull);
+      expect(
+        ComparisonLink.parse({...params, 'tickers': '["a\\u0000b"]'}),
+        isNull,
+      );
+      expect(
+        ComparisonLink.parse({
+          ...params,
+          'tickers': '[${List.generate(13, (i) => '"T$i"').join(',')}]',
+        }),
+        isNull,
+      );
+    },
+  );
+
   group('tickerAppUrl', () {
     test('encodes the ticker and keeps the app hash route', () {
       expect(

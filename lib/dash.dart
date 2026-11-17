@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:macrodash_models/models.dart';
+import 'package:macrodash_preview/macrodash_preview.dart'
+    show ComparisonSeries, ComparisonTimeline, normalizeComparison;
 import 'package:logging/logging.dart';
 import 'package:go_router/go_router.dart';
 
@@ -16,6 +18,8 @@ import 'helper.dart';
 import 'amount_series_page.dart';
 import 'config.dart';
 import 'freshness.dart';
+import 'comparison.dart';
+import 'option_buttons.dart';
 
 final _log = Logger('DashPanel');
 
@@ -134,6 +138,7 @@ class _TickerConfigState extends State<TickerConfig> {
             readOnly: true,
             decoration: InputDecoration(
               labelText: 'Ticker 2 (Optional comparison ticker)',
+              helperText: 'Shows both tickers indexed to 100',
               suffixIcon: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -223,7 +228,11 @@ class DashCard extends StatefulWidget {
 class _DashCardState extends State<DashCard> with TickerProviderStateMixin {
   DashState _state = DashState.loading;
   CustomTickerResult? _customTickerResult;
+  CustomTickerResult? _secondTickerResult;
   bool _show7d = false;
+
+  bool get _isComparison =>
+      widget.ticker.ticker2 != null && widget.ticker.ticker2!.isNotEmpty;
 
   Duration get _window =>
       _show7d ? const Duration(days: 7) : const Duration(hours: 24);
@@ -301,47 +310,61 @@ class _DashCardState extends State<DashCard> with TickerProviderStateMixin {
     } else {
       setState(() => _state = DashState.loading);
     }
-    Result<CustomTickerResult> result;
+    List<Result<CustomTickerResult>> results;
     try {
-      result = await ServerApi()
-          .fetchCustomTicker(widget.ticker, DataRange.sevenDays)
-          .timeout(_reloadTimeout);
+      results = await Future.wait(
+        comparisonTickers(widget.ticker).map(
+          (symbol) => ServerApi()
+              .fetchCustomTicker(
+                DashTicker(title: null, ticker1: symbol, ticker2: null),
+                DataRange.sevenDays,
+              )
+              .timeout(_reloadTimeout),
+        ),
+      );
     } on TimeoutException {
-      result = Result.error(Exception('Timed out'));
+      results = [Result.error(Exception('Timed out'))];
     } catch (e) {
-      // Never leave the card spinning on an unexpected error.
       _log.severe('Failed to load ${widget.ticker.ticker1}: $e');
-      result = Result.error(Exception(e));
+      results = [Result.error(Exception(e))];
     }
-    // A newer load superseded this one.
     if (!mounted || id != _loadId) return;
-    switch (result) {
-      case Ok():
-        setState(() {
-          _customTickerResult = (result as Ok<CustomTickerResult>).value;
-          _loadedAt = DateTime.now();
-          _loadError = null;
-          if (!hasData) _state = DashState.loaded;
-        });
-        if (hasData) {
-          await _progress.animateTo(
-            1,
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOut,
-          );
-          if (!mounted || id != _loadId) return;
-          setState(() => _state = DashState.loaded);
-        }
-        _shine.forward(from: 0);
-      case Error():
+    final errors = results.whereType<Error<CustomTickerResult>>().toList();
+    if (errors.isEmpty) {
+      final values = results.cast<Ok<CustomTickerResult>>();
+      if (values.any((value) => value.value.priceData.isEmpty)) {
+        _log.warning('Empty price data for ${widget.ticker.ticker1}');
         _progress.stop();
         setState(() {
-          _loadError = describeLoadError(
-            (result as Error<CustomTickerResult>).error,
-          );
-          // Keep showing the old data if a reload fails.
+          _loadError = 'No price data available';
           _state = hasData ? DashState.stale : DashState.error;
         });
+        return;
+      }
+      setState(() {
+        _customTickerResult = values.first.value;
+        _secondTickerResult = _isComparison ? values[1].value : null;
+        _loadedAt = DateTime.now();
+        _loadError = null;
+        if (!hasData) _state = DashState.loaded;
+      });
+      if (hasData) {
+        await _progress.animateTo(
+          1,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
+        if (!mounted || id != _loadId) return;
+        setState(() => _state = DashState.loaded);
+      }
+      _shine.forward(from: 0);
+    } else {
+      _progress.stop();
+      setState(() {
+        _loadError = describeLoadError(errors.first.error);
+        // Keep showing the old data if a reload fails.
+        _state = hasData ? DashState.stale : DashState.error;
+      });
     }
   }
 
@@ -462,6 +485,75 @@ class _DashCardState extends State<DashCard> with TickerProviderStateMixin {
     );
   }
 
+  List<ComparisonSeries>? _cardComparison() {
+    final results = [_customTickerResult!, _secondTickerResult!];
+    final symbols = comparisonTickers(widget.ticker);
+    return normalizeComparison([
+      for (var i = 0; i < results.length; i++)
+        ComparisonSeries(
+          label: symbols[i],
+          prices: _windowData(results[i].priceData),
+          dividends: const [],
+          currency: results[i].currency,
+          sources: results[i].sources,
+        ),
+    ]);
+  }
+
+  void _openComparison() {
+    final navigator = Navigator.of(context, rootNavigator: true);
+    final releaseBackGuard = installBackGuard(() => navigator.maybePop());
+    showDialog<void>(
+      context: context,
+      builder:
+          (context) => Dialog.fullscreen(
+            child: ComparisonView(
+              ticker: widget.ticker,
+              onClose: () => Navigator.of(context).pop(),
+            ),
+          ),
+    ).whenComplete(releaseBackGuard);
+  }
+
+  Widget _comparisonValues(List<ComparisonSeries>? series) {
+    if (series == null) {
+      return const SizedBox(
+        width: 110,
+        child: Text(
+          'Not enough overlapping data',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 10),
+        ),
+      );
+    }
+    return Tooltip(
+      message: [
+        for (var i = 0; i < series.length; i++)
+          '${series[i].label}: ${freshnessSummary(sources: series[i].sources, lastPoint: [_customTickerResult!, _secondTickerResult!][i].priceData.last.date, fetchedAt: _loadedAt, now: DateTime.now(), error: _loadError).replaceAll('\n', ' · ')}',
+      ].join('\n'),
+      triggerMode: TooltipTriggerMode.tap,
+      showDuration: const Duration(seconds: 6),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var i = 0; i < series.length; i++)
+            SizedBox(
+              width: 110,
+              child: Text(
+                '${series[i].label} '
+                '${series[i].prices.last.amount >= 100 ? '+' : ''}'
+                '${(series[i].prices.last.amount - 100).toStringAsFixed(2)}%',
+                style: TextStyle(color: comparisonColors[i], fontSize: 11),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   List<Widget> _buildPriceWidgets(bool useColumn) {
     final changePct = _calculateChange(_customTickerResult!.priceData);
     final isUp = changePct >= 0;
@@ -578,6 +670,21 @@ class _DashCardState extends State<DashCard> with TickerProviderStateMixin {
       changeLabel: _windowLabel,
       note: _show7d ? 'Last 7 days' : 'Last 24 hours',
       freshness: _freshnessText().replaceAll('\n', ' · '),
+      shareButton: Tooltip(
+        message: 'Share chart',
+        child: ShareButton(
+          uri: Uri(path: '/ticker'),
+          queryParams: {
+            'ticker1': widget.ticker.ticker1,
+            if (widget.ticker.title != null) 'title': widget.ticker.title!,
+            'range': DataRange.sevenDays.name,
+            'zoom': _show7d ? DataRange.sevenDays.name : DataRange.oneDay.name,
+            'windowDays': _show7d ? '7' : '1',
+          },
+        ),
+      ),
+      comparisonBuilder:
+          (onClose) => ComparisonView(ticker: widget.ticker, onClose: onClose),
       values: sparklineData.sparkline,
       timestamps: sparklineData.sparklineTimestamps,
     );
@@ -645,7 +752,7 @@ class _DashCardState extends State<DashCard> with TickerProviderStateMixin {
     final symbols =
         ticker.ticker2 == null || ticker.ticker2!.isEmpty
             ? ticker.ticker1
-            : '${ticker.ticker1} / ${ticker.ticker2}';
+            : '${ticker.ticker1} vs ${ticker.ticker2}';
     final title = ticker.title;
     final hasTitle = title != null && title.isNotEmpty;
 
@@ -706,9 +813,19 @@ class _DashCardState extends State<DashCard> with TickerProviderStateMixin {
     final result = _customTickerResult!;
     final sparklineData = _calculateSparklineValues(result.priceData);
     final useColumn = MediaQuery.of(context).size.width < 400;
-    final title = widget.ticker.title ?? result.shortName;
+    final title =
+        widget.ticker.title ??
+        (_isComparison
+            ? '${widget.ticker.ticker1} vs ${widget.ticker.ticker2}'
+            : result.shortName);
+    final comparison = _isComparison ? _cardComparison() : null;
     // A subtitle that repeats the title adds nothing.
-    final subtitle = result.longName == title ? '' : result.longName;
+    final subtitle =
+        _isComparison
+            ? '${widget.ticker.ticker1} vs ${widget.ticker.ticker2}'
+            : result.longName == title
+            ? ''
+            : result.longName;
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -744,7 +861,8 @@ class _DashCardState extends State<DashCard> with TickerProviderStateMixin {
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      onPressed: widget.onTitleTap,
+                      onPressed:
+                          _isComparison ? _openComparison : widget.onTitleTap,
                       child: Text(
                         title,
                         style: const TextStyle(
@@ -760,23 +878,50 @@ class _DashCardState extends State<DashCard> with TickerProviderStateMixin {
                 ),
                 const SizedBox(width: 4),
                 // stock value and 24h change
-                ..._buildPriceWidgets(useColumn),
+                if (_isComparison) ...[
+                  _comparisonValues(comparison),
+                  Tooltip(
+                    message: 'Toggle 24h / 7d',
+                    child: InkWell(
+                      onTap: () => setState(() => _show7d = !_show7d),
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Text(
+                          _windowLabel,
+                          style: const TextStyle(fontSize: 10),
+                        ),
+                      ),
+                    ),
+                  ),
+                ] else
+                  ..._buildPriceWidgets(useColumn),
                 const SizedBox(width: 4),
-                Expanded(child: SizedBox()),
-                // Sparkline
-                Tooltip(
-                  message: 'Show larger chart',
-                  child: InkWell(
-                    onTap: () => _showLargeSparkline(context, sparklineData),
-                    child: SizedBox(
-                      width: 110,
-                      height: 25,
-                      child: CustomPaint(
-                        painter: SparkPainter(
-                          sparklineData.sparkline,
-                          timestamps: sparklineData.sparklineTimestamps,
-                          colorUp: context.appColors.gain,
-                          colorDown: context.appColors.loss,
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Tooltip(
+                      message: 'Show larger chart',
+                      child: InkWell(
+                        onTap:
+                            _isComparison
+                                ? _openComparison
+                                : () =>
+                                    _showLargeSparkline(context, sparklineData),
+                        child: SizedBox(
+                          width: 110,
+                          height: 25,
+                          child: CustomPaint(
+                            painter:
+                                _isComparison
+                                    ? _ComparisonSparkPainter(comparison ?? [])
+                                    : SparkPainter(
+                                      sparklineData.sparkline,
+                                      timestamps:
+                                          sparklineData.sparklineTimestamps,
+                                      colorUp: context.appColors.gain,
+                                      colorDown: context.appColors.loss,
+                                    ),
+                          ),
                         ),
                       ),
                     ),
@@ -1201,6 +1346,52 @@ class _DashPanelState extends State<DashPanel> with WidgetsBindingObserver {
   }
 }
 
+class _ComparisonSparkPainter extends CustomPainter {
+  const _ComparisonSparkPainter(this.series);
+
+  final List<ComparisonSeries> series;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (series.isEmpty) return;
+    final points = series.expand((item) => item.prices).toList();
+    final timeline = ComparisonTimeline(series);
+    var low = points.map((p) => p.amount).reduce((a, b) => a < b ? a : b);
+    var high = points.map((p) => p.amount).reduce((a, b) => a > b ? a : b);
+    if (low == high) {
+      low -= 1;
+      high += 1;
+    }
+    if (timeline.length < 2) return;
+    for (var i = 0; i < series.length; i++) {
+      final path = Path();
+      for (var j = 0; j < series[i].prices.length; j++) {
+        final point = series[i].prices[j];
+        final x =
+            timeline.position(point.date) / (timeline.length - 1) * size.width;
+        final y =
+            size.height - (point.amount - low) / (high - low) * size.height;
+        if (j == 0) {
+          path.moveTo(x, y);
+        } else {
+          path.lineTo(x, y);
+        }
+      }
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = comparisonColors[i % comparisonColors.length]
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ComparisonSparkPainter oldDelegate) =>
+      series != oldDelegate.series;
+}
+
 /// First-run hints about the dashboard gestures, dismissed for good once closed.
 class _DashTips extends StatelessWidget {
   const _DashTips({required this.onDismiss});
@@ -1226,7 +1417,8 @@ class _DashTips extends StatelessWidget {
                 'Tap the percentage change on a card to switch between 24h and '
                 '7d, tap the price to see its source and age, tap the name to '
                 'open a full chart, and drag the handle to reorder. Add a '
-                'second ticker to compare two assets. Your watchlist is saved '
+                'second ticker to compare two assets; tap the chart to add '
+                'more. Your watchlist is saved '
                 'on this device.',
                 style: TextStyle(color: colors.onSecondaryContainer),
               ),

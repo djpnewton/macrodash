@@ -182,12 +182,12 @@ void main() {
       tester,
       client: tickerClient(requests: requests),
       () async {
-        expect(requests, hasLength(4));
+        expect(requests, hasLength(5));
 
         await tester.fling(find.byType(GridView), const Offset(0, 400), 1000);
         await tester.pumpAndSettle();
 
-        expect(requests, hasLength(8));
+        expect(requests, hasLength(10));
         expect(cardOrder(tester), hasLength(4));
       },
     );

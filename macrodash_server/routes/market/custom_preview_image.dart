@@ -46,7 +46,11 @@ Future<Response> onRequest(RequestContext context) async {
   }
 
   final png = await renderPreviewPng(
-    PreviewData.fromTicker(result, title: params['title']),
+    PreviewData.fromTicker(
+      result,
+      title: params['title'],
+      days: params['windowDays'] == '1' ? 1 : 7,
+    ),
   );
   cache.add(key, png);
   return _pngResponse(png);

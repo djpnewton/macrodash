@@ -76,10 +76,12 @@ String tickerPreviewImageUrl({
 }) {
   final ticker2 = params['ticker2'];
   final title = params['title'];
+  final windowDays = params['windowDays'];
   final query = _query({
     'ticker1': ticker1,
     if (ticker2 != null && ticker2.isNotEmpty) 'ticker2': ticker2,
     if (title != null && title.isNotEmpty) 'title': title,
+    if (windowDays == '1' || windowDays == '7') 'windowDays': windowDays!,
     'range': previewImageRange(params).name,
   });
   return '${_trimSlashes(previewUrl)}/market/custom_preview_image?$query';
@@ -121,6 +123,22 @@ String pageShareUrl({
   final query = _query(params);
   return query.isEmpty ? base : '$base?$query';
 }
+
+/// URLs for the multi-series comparison preview and its app destination.
+String comparisonShareUrl({
+  required String previewUrl,
+  required Map<String, String> params,
+}) => '${_trimSlashes(previewUrl)}/compare?${_query(params)}';
+
+String comparisonPreviewImageUrl({
+  required String previewUrl,
+  required Map<String, String> params,
+}) => '${_trimSlashes(previewUrl)}/compare/preview_image?${_query(params)}';
+
+String comparisonAppUrl({
+  required String appUrl,
+  required Map<String, String> params,
+}) => '${_trimSlashes(appUrl)}/#/compare?${_query(params)}';
 
 String _query(Map<String, String> params) {
   final keys = params.keys.where((k) => params[k]!.isNotEmpty).toList()..sort();

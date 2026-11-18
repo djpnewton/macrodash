@@ -50,6 +50,7 @@ class ComparisonLink {
         baseCount > 2 ||
         baseCount > tickers.length ||
         !const [
+          'oneDay',
           'sevenDays',
           'oneMonth',
           'oneYear',
@@ -76,6 +77,9 @@ DateTime comparisonYearStart(DateTime now, int offsetMinutes) {
   final year = now.toUtc().add(offset).year;
   return DateTime.utc(year).subtract(offset);
 }
+
+/// Starting index for each normalized series (zero percent change).
+const comparisonBaseline = 100.0;
 
 /// Chart colors shared by the app and preview renderer.
 const comparisonColorValues = [
@@ -128,9 +132,11 @@ class ComparisonTimeline {
 }
 
 /// Clips to the common window and indexes each series to 100.
+/// When [window] is set, it ends at the earliest series' last timestamp.
 List<ComparisonSeries>? normalizeComparison(
   List<ComparisonSeries> input, {
   DateTime? cutoff,
+  Duration? window,
 }) {
   if (input.isEmpty) return null;
   final sorted = [
@@ -159,6 +165,8 @@ List<ComparisonSeries>? normalizeComparison(
       .map((series) => series.prices.last.date)
       .reduce((a, b) => a.isBefore(b) ? a : b);
   if (!start.isBefore(end)) return null;
+  final windowStart = window == null ? start : end.subtract(window);
+  final effectiveStart = windowStart.isAfter(start) ? windowStart : start;
 
   DateTime day(DateTime date) => DateTime(date.year, date.month, date.day);
   final output = <ComparisonSeries>[];
@@ -167,7 +175,8 @@ List<ComparisonSeries>? normalizeComparison(
         series.prices
             .where(
               (entry) =>
-                  !entry.date.isBefore(start) && !entry.date.isAfter(end),
+                  !entry.date.isBefore(effectiveStart) &&
+                  !entry.date.isAfter(end),
             )
             .toList();
     if (prices.length < 2 || prices.first.amount == 0) return null;
@@ -186,7 +195,7 @@ List<ComparisonSeries>? normalizeComparison(
             series.dividends
                 .where(
                   (entry) =>
-                      !day(entry.date).isBefore(day(start)) &&
+                      !day(entry.date).isBefore(day(effectiveStart)) &&
                       !day(entry.date).isAfter(day(end)),
                 )
                 .toList()

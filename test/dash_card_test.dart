@@ -166,7 +166,7 @@ void main() {
         expect(find.text('BBB +80.00%'), findsOneWidget);
         await tester.tap(find.byTooltip('Show larger chart'));
         await tester.pumpAndSettle();
-        expect(find.text('Compare prices'), findsOneWidget);
+        expect(find.text('Relative performance'), findsOneWidget);
         expect(find.text('AAA'), findsOneWidget);
         expect(find.text('BBB'), findsOneWidget);
         expect(requests, hasLength(4));
@@ -174,7 +174,7 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(find.text('Saved pair'));
         await tester.pumpAndSettle();
-        expect(find.text('Compare prices'), findsOneWidget);
+        expect(find.text('Relative performance'), findsOneWidget);
       });
     },
   );
@@ -191,6 +191,19 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('AAA +10.00%'), findsOneWidget);
     expect(find.text('BBB +10.00%'), findsOneWidget);
+    final chart = find.byWidgetPredicate(
+      (widget) =>
+          widget is CustomPaint &&
+          widget.painter?.runtimeType.toString() == '_ComparisonSparkPainter',
+    );
+    expect(
+      chart,
+      paints..line(
+        p1: const Offset(0, 24.5),
+        p2: Offset(tester.getSize(chart).width, 24.5),
+        color: AppTheme.light().colorScheme.outline,
+      ),
+    );
   });
 
   testWidgets('failed component reload keeps both previous comparison values', (
@@ -433,7 +446,7 @@ void main() {
         expect(find.text('Not enough data for this chart.'), findsOneWidget);
         await tester.tap(find.text('Compare'));
         await tester.pumpAndSettle();
-        expect(find.text('Compare prices'), findsOneWidget);
+        expect(find.text('Relative performance'), findsOneWidget);
         expect(find.textContaining('Indexed to 100'), findsOneWidget);
         expect(requests.last.queryParameters['range'], 'sevenDays');
         await tester.tap(find.byTooltip('Back to chart'));

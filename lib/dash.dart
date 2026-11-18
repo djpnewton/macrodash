@@ -3,7 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:macrodash_models/models.dart';
 import 'package:macrodash_preview/macrodash_preview.dart'
-    show ComparisonSeries, ComparisonTimeline, normalizeComparison;
+    show
+        ComparisonSeries,
+        ComparisonTimeline,
+        comparisonBaseline,
+        normalizeComparison;
 import 'package:logging/logging.dart';
 import 'package:go_router/go_router.dart';
 
@@ -913,7 +917,10 @@ class _DashCardState extends State<DashCard> with TickerProviderStateMixin {
                           child: CustomPaint(
                             painter:
                                 _isComparison
-                                    ? _ComparisonSparkPainter(comparison ?? [])
+                                    ? _ComparisonSparkPainter(
+                                      comparison ?? [],
+                                      Theme.of(context).colorScheme.outline,
+                                    )
                                     : SparkPainter(
                                       sparklineData.sparkline,
                                       timestamps:
@@ -1347,9 +1354,10 @@ class _DashPanelState extends State<DashPanel> with WidgetsBindingObserver {
 }
 
 class _ComparisonSparkPainter extends CustomPainter {
-  const _ComparisonSparkPainter(this.series);
+  const _ComparisonSparkPainter(this.series, this.baselineColor);
 
   final List<ComparisonSeries> series;
+  final Color baselineColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1363,6 +1371,19 @@ class _ComparisonSparkPainter extends CustomPainter {
       high += 1;
     }
     if (timeline.length < 2) return;
+    final baselineY =
+        size.height - (comparisonBaseline - low) / (high - low) * size.height;
+    final visibleBaselineY =
+        size.height >= 1
+            ? baselineY.clamp(0.5, size.height - 0.5)
+            : size.height / 2;
+    canvas.drawLine(
+      Offset(0, visibleBaselineY),
+      Offset(size.width, visibleBaselineY),
+      Paint()
+        ..color = baselineColor
+        ..strokeWidth = 1,
+    );
     for (var i = 0; i < series.length; i++) {
       final path = Path();
       for (var j = 0; j < series[i].prices.length; j++) {
@@ -1389,7 +1410,8 @@ class _ComparisonSparkPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _ComparisonSparkPainter oldDelegate) =>
-      series != oldDelegate.series;
+      series != oldDelegate.series ||
+      baselineColor != oldDelegate.baselineColor;
 }
 
 /// First-run hints about the dashboard gestures, dismissed for good once closed.

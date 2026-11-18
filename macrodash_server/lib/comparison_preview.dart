@@ -18,6 +18,7 @@ Future<List<ComparisonSeries>?> buildComparisonPreview({
   final cached = cache.get(key);
   if (cached is List<ComparisonSeries>) return cached;
   final range = switch (link.range) {
+    'oneDay' => DataRange.sevenDays,
     'sevenDays' => DataRange.sevenDays,
     'oneMonth' => DataRange.oneMonth,
     'oneYear' || 'yearToDate' => DataRange.oneYear,
@@ -43,7 +44,11 @@ Future<List<ComparisonSeries>?> buildComparisonPreview({
   final cutoff = link.range == 'yearToDate'
       ? comparisonYearStart(DateTime.now(), link.yearOffsetMinutes ?? 0)
       : null;
-  final normalized = normalizeComparison(series, cutoff: cutoff);
+  final normalized = normalizeComparison(
+    series,
+    cutoff: cutoff,
+    window: link.range == 'oneDay' ? const Duration(hours: 24) : null,
+  );
   if (normalized == null) {
     _log.warning('Not enough overlapping data for comparison preview');
     return null;
@@ -54,6 +59,7 @@ Future<List<ComparisonSeries>?> buildComparisonPreview({
 
 /// Human-readable label for a validated range.
 String comparisonRangeLabel(String range) => switch (range) {
+      'oneDay' => '24h',
       'sevenDays' => '7D',
       'oneMonth' => '1M',
       'oneYear' => '1Y',

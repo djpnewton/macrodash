@@ -26,6 +26,7 @@ List<String> comparisonTickers(DashTicker ticker) => [
 ];
 
 enum ComparisonRange {
+  oneDay('24h', DataRange.sevenDays),
   sevenDays('7D', DataRange.sevenDays),
   oneMonth('1M', DataRange.oneMonth),
   oneYear('1Y', DataRange.oneYear),
@@ -42,7 +43,7 @@ GoRoute comparisonRoute() => GoRoute(
     final link = ComparisonLink.parse(state.uri.queryParameters);
     if (link == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Compare prices')),
+        appBar: AppBar(title: const Text('Relative performance')),
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -182,7 +183,12 @@ class _ComparisonViewState extends State<ComparisonView> {
                   DateTime(now.year).timeZoneOffset.inMinutes,
             )
             : null;
-    final normalized = normalizeComparison(series, cutoff: cutoff);
+    final normalized = normalizeComparison(
+      series,
+      cutoff: cutoff,
+      window:
+          range == ComparisonRange.oneDay ? const Duration(hours: 24) : null,
+    );
     setState(() {
       _loading = false;
       if (normalized == null) {
@@ -233,9 +239,13 @@ class _ComparisonViewState extends State<ComparisonView> {
   @override
   Widget build(BuildContext context) {
     final series = _series;
+    String formatEndpoint(DateTime date) =>
+        _range == ComparisonRange.oneDay
+            ? DateFormat.yMMMd().add_Hm().format(date.toLocal())
+            : DateFormat.yMMMd().format(date);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Compare prices'),
+        title: const Text('Relative performance'),
         actions: [
           Tooltip(
             message: 'Share comparison',
@@ -353,7 +363,8 @@ class _ComparisonViewState extends State<ComparisonView> {
               Text(
                 'Indexed to 100 at each series’ first available point in '
                 'the common window. Observations are evenly spaced, not '
-                'elapsed time; price changes exclude dividends.',
+                'elapsed time; price changes exclude dividends. '
+                'The horizontal line marks the starting value (0%).',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: 16),
@@ -364,7 +375,7 @@ class _ComparisonViewState extends State<ComparisonView> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      DateFormat.yMMMd().format(
+                      formatEndpoint(
                         series
                             .map((item) => item.prices.first.date)
                             .reduce((a, b) => a.isBefore(b) ? a : b),
@@ -372,7 +383,7 @@ class _ComparisonViewState extends State<ComparisonView> {
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     Text(
-                      DateFormat.yMMMd().format(
+                      formatEndpoint(
                         series
                             .map((item) => item.prices.last.date)
                             .reduce((a, b) => a.isAfter(b) ? a : b),
@@ -438,6 +449,10 @@ class _ComparisonViewState extends State<ComparisonView> {
 
   Widget _chart(List<ComparisonSeries> series) {
     final timeline = ComparisonTimeline(series);
+    final amounts = series.expand((item) => item.prices).map((p) => p.amount);
+    final low = amounts.reduce(math.min);
+    final high = amounts.reduce(math.max);
+    final padding = low == high ? 1.0 : (high - low) * 0.05;
     bool sameDay(DateTime a, DateTime b) =>
         a.year == b.year && a.month == b.month && a.day == b.day;
     final markerIndices = [
@@ -457,7 +472,30 @@ class _ComparisonViewState extends State<ComparisonView> {
       LineChartData(
         minX: 0,
         maxX: (timeline.length - 1).toDouble(),
-        gridData: const FlGridData(drawVerticalLine: false),
+        minY: low - padding,
+        maxY: high + padding,
+        gridData: const FlGridData(show: false),
+        borderData: FlBorderData(
+          border: Border(
+            top: BorderSide(
+              color: Theme.of(context).colorScheme.outlineVariant,
+            ),
+            bottom: BorderSide(
+              color: Theme.of(context).colorScheme.outlineVariant,
+            ),
+          ),
+        ),
+        extraLinesData: ExtraLinesData(
+          extraLinesOnTop: false,
+          horizontalLines: [
+            HorizontalLine(
+              y: comparisonBaseline,
+              color: Theme.of(context).colorScheme.outline,
+              strokeWidth: 1,
+              dashArray: [5, 4],
+            ),
+          ],
+        ),
         titlesData: FlTitlesData(
           topTitles: const AxisTitles(
             sideTitles: SideTitles(showTitles: false),

@@ -14,10 +14,12 @@ Live app: <https://macrodash.me>
 - **Comparison tickers**: pair two tickers on a card to compare their indexed
   price changes (for example `BTC-USD` vs `GC=F`). Existing two-ticker cards
   now show comparisons rather than ratios. Tap the card's chart or name to
-  overlay additional tickers, select 7D, 1M, 1Y or YTD, and see dividend events.
+  overlay additional tickers, select 24h, 7D, 1M, 1Y or YTD, and see dividend events.
   For a single-ticker card, tap its chart, then **Compare**.
   Overlays are indexed to 100 at each series' first available point in the
-  common time window; they show price changes, not total returns. YTD starts
+  common time window; the horizontal line marks that starting value (0%).
+  They show price changes, not total returns. The 24h window ends at the
+  earliest last observation among the series, and YTD starts
   with the first available observation of the current calendar year. Overlay
   selections are temporary and do not change the saved watchlist.
   Like the sparklines, comparison charts space observations evenly rather than

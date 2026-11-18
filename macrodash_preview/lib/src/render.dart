@@ -72,7 +72,7 @@ class _ComparisonPreviewPainter extends _TickerPreviewPainter {
       PStyle(color: _color(MacroDashPalette.subtle)),
     );
     canvas.drawText(
-      'Price comparison',
+      'Relative performance',
       205,
       112,
       PFont('Arial', 48, bold: true),
@@ -131,12 +131,12 @@ class _ComparisonPreviewPainter extends _TickerPreviewPainter {
     }
     const left = 150.0, top = 330.0, bottom = 540.0;
     final right = width - 80;
-    for (final y in [top, bottom]) {
-      canvas.strokePath([
-        Point(left, y),
-        Point(right, y),
-      ], PStyle(color: _color(MacroDashPalette.grid)));
-    }
+    final baselineY =
+        bottom - (comparisonBaseline - low) / (high - low) * (bottom - top);
+    canvas.strokePath([
+      Point(left, baselineY),
+      Point(right, baselineY),
+    ], PStyle(color: _color(MacroDashPalette.subtle)));
     for (var i = 0; i < series.length; i++) {
       final points = [
         for (final p in series[i].prices)

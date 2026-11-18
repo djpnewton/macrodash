@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'package:dart_frog/dart_frog.dart';
 import 'package:macrodash_models/models.dart';
 import 'package:macrodash_server/cache.dart';
+import 'package:macrodash_server/comparison_preview.dart';
 import 'package:macrodash_server/market_data.dart';
+import 'package:macrodash_preview/macrodash_preview.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
@@ -29,6 +31,57 @@ CustomTickerResult ticker(String symbol, double end) => CustomTickerResult(
     );
 
 void main() {
+  test('24h links fetch seven-day data and share the common window', () async {
+    final end = DateTime.utc(2025, 1, 4, 12);
+    final market = MockMarketData();
+    final data = CustomTickerResult(
+      ticker1: 'AAA',
+      ticker2: null,
+      shortName: 'AAA',
+      longName: 'AAA',
+      sources: const ['yahoo'],
+      priceData: [
+        AmountEntry(date: end.subtract(const Duration(hours: 25)), amount: 50),
+        AmountEntry(date: end.subtract(const Duration(hours: 24)), amount: 100),
+        AmountEntry(date: end, amount: 110),
+      ],
+      dividendData: const [],
+      currency: 'USD',
+    );
+    when(() => market.custom('AAA', null, DataRange.sevenDays, null))
+        .thenAnswer((_) async => data);
+    final params = {
+      'tickers': jsonEncode(['AAA']),
+      'baseCount': '1',
+      'range': 'oneDay',
+    };
+    final link = ComparisonLink.parse(params)!;
+    final cache = Cache();
+    final preview = await buildComparisonPreview(
+      link: link,
+      marketData: market,
+      cache: cache,
+    );
+    expect(preview!.single.prices.map((point) => point.amount), [
+      100,
+      closeTo(110, 1e-9),
+    ]);
+    final context = MockContext();
+    when(() => context.request).thenReturn(
+      Request.get(Uri.https('ln.example.test', '/compare', params)),
+    );
+    when(() => context.read<MarketData>()).thenReturn(market);
+    when(() => context.read<Cache>()).thenReturn(cache);
+    final response = await html.onRequest(context);
+    final body = await response.body();
+    expect(response.statusCode, 200);
+    expect(body, contains('AAA - 24h'));
+    expect(body, contains('Relative performance on MacroDash'));
+    expect(body, contains('range=oneDay'));
+    verify(() => market.custom('AAA', null, DataRange.sevenDays, null))
+        .called(1);
+  });
+
   test('HTML and PNG share normalized data and preserve link parameters',
       () async {
     final params = {

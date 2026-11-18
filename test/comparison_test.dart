@@ -57,7 +57,16 @@ void main() {
         await tester.pumpAndSettle();
         final chart = tester.widget<LineChart>(find.byType(LineChart)).data;
         expect(chart.maxX, 2);
-        expect(chart.gridData.drawVerticalLine, isFalse);
+        expect(chart.gridData.show, isFalse);
+        expect(chart.borderData.show, isTrue);
+        expect(chart.borderData.border.top.style, BorderStyle.solid);
+        expect(chart.borderData.border.bottom.style, BorderStyle.solid);
+        expect(chart.borderData.border.left.style, BorderStyle.none);
+        expect(chart.borderData.border.right.style, BorderStyle.none);
+        expect(chart.extraLinesData.horizontalLines.single.y, 100);
+        expect(chart.extraLinesData.extraLinesOnTop, isFalse);
+        expect(chart.minY, lessThan(100));
+        expect(find.text('Relative performance'), findsOneWidget);
         expect(chart.lineBarsData[0].spots.map((spot) => spot.x), [0, 1, 2]);
         expect(chart.lineBarsData[1].spots.map((spot) => spot.x), [0, 2]);
       },
@@ -145,6 +154,81 @@ void main() {
     expect(pixel(505, 222), comparisonColors[1]);
     expect(pixel(1120, 330), comparisonColors[0]);
     expect(pixel(1120, 540), comparisonColors[1]);
+    expect(pixel(900, 435), const Color(MacroDashPalette.subtle));
+    expect(pixel(900, 330), isNot(const Color(MacroDashPalette.grid)));
+    expect(pixel(900, 540), isNot(const Color(MacroDashPalette.grid)));
+  });
+
+  test('24h comparison uses the latest common observation as its end', () {
+    final end = DateTime.utc(2025, 1, 4, 12);
+    final normalized =
+        normalizeComparison([
+          series('A', [
+            (end.subtract(const Duration(hours: 25)), 50),
+            (end.subtract(const Duration(hours: 24)), 100),
+            (end.subtract(const Duration(hours: 12)), 110),
+            (end.add(const Duration(hours: 3)), 120),
+          ]),
+          series('B', [
+            (end.subtract(const Duration(hours: 25)), 50),
+            (end.subtract(const Duration(hours: 24)), 100),
+            (end.subtract(const Duration(hours: 12)), 90),
+            (end, 80),
+          ]),
+        ], window: const Duration(hours: 24))!;
+    expect(normalized[0].prices.map((p) => p.amount), [
+      100,
+      closeTo(110, 1e-9),
+    ]);
+    expect(normalized[1].prices.map((p) => p.amount), [
+      100,
+      closeTo(90, 1e-9),
+      80,
+    ]);
+  });
+
+  testWidgets('24h selection charts only data in its common window', (
+    tester,
+  ) async {
+    final end = DateTime.utc(2025, 1, 4, 12);
+    final requests = <Uri>[];
+    final prices = [
+      (end.subtract(const Duration(hours: 25)), 50.0),
+      (end.subtract(const Duration(hours: 24)), 100.0),
+      (end.subtract(const Duration(hours: 12)), 110.0),
+      (end, 120.0),
+    ];
+    await http.runWithClient(
+      () async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: ComparisonView(
+              ticker: const DashTicker(
+                title: null,
+                ticker1: 'AAA',
+                ticker2: null,
+              ),
+              onClose: () {},
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('24h'));
+        await tester.pumpAndSettle();
+        expect(requests.last.queryParameters['range'], 'sevenDays');
+        final chart = tester.widget<LineChart>(find.byType(LineChart)).data;
+        expect(chart.lineBarsData.single.spots, hasLength(3));
+        expect(chart.lineBarsData.single.spots.first.y, 100);
+        expect(chart.lineBarsData.single.spots.last.y, closeTo(120, 1e-9));
+        await tester.drag(find.byType(ListView), const Offset(0, -350));
+        await tester.pumpAndSettle();
+        expect(find.text('AAA · +20.00%'), findsOneWidget);
+      },
+      () => tickerClient(
+        body: jsonEncode(tickerResponse(prices: prices)),
+        requests: requests,
+      ),
+    );
   });
 
   test('normalizes each series within the shared window', () {
@@ -495,7 +579,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('1Y'));
+      await tester.tap(find.text('24h'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), '^GSPC');
       await tester.tap(find.text('Add'));
@@ -508,7 +592,7 @@ void main() {
       );
       final previewUri = Uri.parse(preview.url);
       expect(previewUri.path, '/compare/preview_image');
-      expect(previewUri.queryParameters['range'], 'oneYear');
+      expect(previewUri.queryParameters['range'], 'oneDay');
       expect(jsonDecode(previewUri.queryParameters['tickers']!), [
         'BTC-USD',
         'GC=F',
@@ -532,7 +616,7 @@ void main() {
         'GC=F',
         '^GSPC',
       ]);
-      expect(appLocation.queryParameters['range'], 'oneYear');
+      expect(appLocation.queryParameters['range'], 'oneDay');
       expect(appLocation.queryParameters['baseCount'], '2');
 
       requests.clear();
@@ -555,12 +639,12 @@ void main() {
         '^GSPC',
       ]);
       expect(
-        requests.every((r) => r.queryParameters['range'] == 'oneYear'),
+        requests.every((r) => r.queryParameters['range'] == 'sevenDays'),
         isTrue,
       );
       expect(
         tester
-            .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, '1Y'))
+            .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, '24h'))
             .selected,
         isTrue,
       );

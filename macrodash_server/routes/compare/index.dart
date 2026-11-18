@@ -42,12 +42,11 @@ Future<Response> onRequest(RequestContext context) async {
   return Response(
     body: renderLinkPreviewHtml(
       title: title,
-      description: 'Indexed price comparison on MacroDash. '
+      description: 'Relative performance on MacroDash. '
           'Price changes exclude dividends.',
       shareUrl: comparisonShareUrl(previewUrl: baseUrl, params: params),
       imageUrl: imageUrl,
-      imageAlt:
-          'MacroDash indexed price comparison for ${link.tickers.join(', ')}',
+      imageAlt: 'MacroDash relative performance for ${link.tickers.join(', ')}',
       appLink: comparisonAppUrl(appUrl: appUrl, params: params),
     ),
     headers: {
